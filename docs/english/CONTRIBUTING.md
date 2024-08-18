@@ -4,7 +4,7 @@
 
 <hr />
 
-<img src="./public/static/banners/kito_banner_en.png" alt="Kito Banner" />
+<img src="../../public/static/banners/kito_banner_en.png" alt="Kito Banner" />
 
 <hr />
 

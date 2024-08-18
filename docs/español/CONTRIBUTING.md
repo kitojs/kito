@@ -1,10 +1,10 @@
 <div align="center">
 
-[🇺🇸 English](./CONTRIBUTING.md) `‖` [🇪🇸 Español](./CONTRIBUTING_ES.md) `‖` [🇵🇹 Português](./CONTRIBUTING_PT.md) `‖` [🇫🇷 Français](./CONTRIBUTING_FR.md) `‖` [🇮🇹 Italiano](./CONTRIBUTING_IT.md)
+[🇺🇸 English](../english/CONTRIBUTING.md) `‖` [🇪🇸 Español](./docs/español/CONTRIBUTING.md) `‖` [🇵🇹 Português](./docs/português/CONTRIBUTING.md) `‖` [🇫🇷 Français](./docs/français/CONTRIBUTING.md) `‖` [🇮🇹 Italiano](./docs/italiano/CONTRIBUTING.md)
 
 <hr />
 
-<img src="./public/static/kito_banner_es.png" alt="Kito Banner" />
+<img src="../../public/static/banners/kito_banner_es.png" alt="Kito Banner" />
 
 <hr />
 

@@ -1,10 +1,10 @@
 <div align="center">
 
-[🇺🇸 English](./README.md) `‖` [🇪🇸 Español](./README_ES.md) `‖` [🇵🇹 Português](./README_PT.md) `‖` [🇫🇷 Français](./README_FR.md) `‖` [🇮🇹 Italiano](./README_IT.md)
+[🇺🇸 English](../english/README.md) `‖` [🇪🇸 Español](./docs/español/README.md) `‖` [🇵🇹 Português](./docs/português/README.md) `‖` [🇫🇷 Français](./docs/français/README.md) `‖` [🇮🇹 Italiano](./docs/italiano/README.md)
 
 <hr />
 
-<img src="./public/static/kito_banner_it.png" alt="Kito Banner" />
+<img src="../../public/static/banners/kito_banner_it.png" alt="Kito Banner" />
 
 <hr />
 
