@@ -1,0 +1,11 @@
+{
+  "name": "frontend",
+  "version": "1.0.0",
+  "description": "Kito's front-end API in TypeScript.",
+  "main": "index.js",
+  "author": "Nehuén | https://github.com/nehu3n",
+  "license": "MIT",
+  "devDependencies": {
+    "@biomejs/biome": "1.8.3"
+  }
+}
