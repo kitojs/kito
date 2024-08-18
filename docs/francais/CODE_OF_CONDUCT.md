@@ -1,6 +1,6 @@
 <div align="center">
 
-[🇺🇸 English](../english/CODE_OF_CONDUCT.md) `‖` [🇪🇸 Español](../español/CODE_OF_CONDUCT.md) `‖` [🇵🇹 Português](../portugues/CODE_OF_CONDUCT.md) `‖` [🇫🇷 Français](../francais/CODE_OF_CONDUCT.md) `‖` [🇮🇹 Italiano](../italiano/CODE_OF_CONDUCT.md)
+[🇺🇸 English](../../CODE_OF_CONDUCT.md) `‖` [🇪🇸 Español](../español/CODE_OF_CONDUCT.md) `‖` [🇵🇹 Português](../portugues/CODE_OF_CONDUCT.md) `‖` [🇫🇷 Français](../francais/CODE_OF_CONDUCT.md) `‖` [🇮🇹 Italiano](../italiano/CODE_OF_CONDUCT.md)
 
 <hr />
 
