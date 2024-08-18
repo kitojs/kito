@@ -1,6 +1,6 @@
 <div align="center">
 
-[🇺🇸 English](../english/README.md) `‖` [🇪🇸 Español](./docs/español/README.md) `‖` [🇵🇹 Português](./docs/português/README.md) `‖` [🇫🇷 Français](./docs/français/README.md) `‖` [🇮🇹 Italiano](./docs/italiano/README.md)
+[🇺🇸 English](../english/README.md) `‖` [🇪🇸 Español](../español/README.md) `‖` [🇵🇹 Português](../portugues/README.md) `‖` [🇫🇷 Français](../francais/README.md) `‖` [🇮🇹 Italiano](../italiano/README.md)
 
 <hr />
 

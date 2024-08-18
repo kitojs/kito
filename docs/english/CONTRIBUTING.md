@@ -1,6 +1,6 @@
 <div align="center">
 
-[🇺🇸 English](./CONTRIBUTING.md) `‖` [🇪🇸 Español](./docs/español/CONTRIBUTING_ES.md.md) `‖` [🇵🇹 Português](./docs/português/CONTRIBUTING_PT.md.md) `‖` [🇫🇷 Français](./docs/français/CONTRIBUTING_FR.md.md) `‖` [🇮🇹 Italiano](./docs/italiano/CONTRIBUTING_IT.md.md)
+[🇺🇸 English](../english/CONTRIBUTING.md) `‖` [🇪🇸 Español](../español/CONTRIBUTING.md) `‖` [🇵🇹 Português](../portugues/CONTRIBUTING.md) `‖` [🇫🇷 Français](../francais/CONTRIBUTING.md) `‖` [🇮🇹 Italiano](../italiano/CONTRIBUTING.md)
 
 <hr />
 
