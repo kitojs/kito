@@ -8,6 +8,9 @@ devDependencies:
   '@biomejs/biome':
     specifier: 1.8.3
     version: 1.8.3
+  '@types/node':
+    specifier: ^22.4.0
+    version: 22.4.0
 
 packages:
 
@@ -98,3 +101,13 @@ packages:
     requiresBuild: true
     dev: true
     optional: true
+
+  /@types/node@22.4.0:
+    resolution: {integrity: sha512-49AbMDwYUz7EXxKU/r7mXOsxwFr4BYbvB7tWYxVuLdb2ibd30ijjXINSMAHiEEZk5PCRBmW1gUeisn2VMKt3cQ==}
+    dependencies:
+      undici-types: 6.19.6
+    dev: true
+
+  /undici-types@6.19.6:
+    resolution: {integrity: sha512-e/vggGopEfTKSvj4ihnOLTsqhrKRN3LeO6qSN/GxohhuRv8qH9bNQ4B8W7e/vFL+0XTnmHPB4/kegunZGA4Org==}
+    dev: true
