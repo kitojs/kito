@@ -1,33 +1,70 @@
 <div align="center">
 
-[🇺🇸 English](./README.md) `‖` [🇪🇸 Español](./docs/español/README.md) `‖` [🇵🇹 Português](./docs/portugues/README.md) `‖` [🇫🇷 Français](./docs/francais/README.md) `‖` [🇮🇹 Italiano](./docs/italiano/README.md)
+<img src="./public/logo.png" alt="Kito Logo" width="120px" />
 
-<hr />
-
-<img src="./public/static/banners/kito_banner_en.png" alt="Kito Banner" />
-
-<hr />
+A **web framework** written in **Rust** for **TypeScript**.
 
 </div>
 
-## 👋🏼 About
+---
 
-**Kito** 🦊 is a **_backend web framework_** that combines _flexibility_, _performance_ and _consistency_. It allows you to develop services in TypeScript (or JavaScript) and **compile them to high-performance languages** such as **Rust** 🦀 or **Go** 🐹, improving efficiency compared to _NodeJS_ 🐢 or _Bun_ 🍙.
+## 👋🏼 What is Kito
 
-With **Kito**, you can maintain a unified and familiar code base, **making it easy to develop scalable**, **high-performance applications** ⚡ without rewriting code. Its approach simplifies maintenance and ensures consistency across multiple languages, **offering a comprehensive solution for building robust applications.** 🔥
+**Kito** is an ultra-modern _web framework_ that combines the power of **Rust** with the simplicity and elegance of **TypeScript**. Designed to be _minimalist_, _blazing-fast_, and _extremely secure_, Kito allows you to build *high-performance* applications with a _clean_, _user-friendly_, and _end-to-end type-safe API_.
 
-## 🚀 Get Started
+Under the hood, **Kito** is powered by **[Actix](https://github.com/actix/actix-web)**, one of the fastest and most robust **Rust** frameworks in the world. The **TypeScript** API allows you to define routes, middlewares, and all the logic without needing to touch **Rust**.
 
-Let's **get started!** Go to the [introduction file](docs/INTRODUCTION.md) to start your _(exciting)_ journey with **Kito.**
+---
 
-## 👀 Benchmarks
+## 🚀 Quick Start
 
-See the [benchmarks folder](/benchmarks) for a detailed reading.
+Install Kito and create your first application in just a few minutes.
+
+```bash
+deno add jsr:kito
+```
+
+A simple example of an API with a route:
+
+```typescript
+import { kito } from "kito";
+
+const app = kito();
+
+app.get("/", (req, res) => {
+  res.send("Hello, world!");
+});
+
+app.listen(3000);
+```
+
+Your server is running on `http://localhost:3000`, responding with "Hello, world!". It's that simple!
+
+---
+
+## ✨ Features
+
+- 🚀 **Extremely fast**: Thanks to Rust and Actix, Kito achieves speeds that surpass all existing web frameworks in the ecosystem. Check it out in the [benchmarks](./bench).
+- 📝 **Type-Safe end-to-end**: Enjoy type safety from client to server, inspired by the approach of [tRPC](https://trpc.io).
+- 🔧 **Extensible**: Define routes, middlewares, and all application logic without limitations.
+- 💻 **Friendly API**: Minimalist, clean, and easy to understand. Writing code in Kito feels natural and familiar.
+
+---
+
+## 📚 Documentation
+
+Check out the full documentation at [kito.pages.dev](https://kito.pages.dev) to learn more about Kito.
+
+---
+
+## ✍️ Contributing
+
+Want to help improve Kito? Take a look at the [CONTRIBUTING.md](./CONTRIBUTING.md) for important information on how to contribute to the project.
+
+---
 
 ## 📄 License
 
-The whole project is under the **MIT license** ([see file](./LICENSE)).
+This project is licensed under the [MIT License](./LICENSE). Enjoy it and help it grow.
 
-## 👤 Author
-
-**Kito** was created and mainly developed by **Nehuén** ([GitHub here](https://github.com/nehu3n)).
+---
