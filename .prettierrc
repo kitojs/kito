@@ -1,0 +1,17 @@
+{
+    "useTabs": true,
+    "tabWidth": 4,
+    "semi": false,
+    "singleQuote": true,
+    "trailingComma": "none",
+    "overrides": [
+        {
+            "files": [
+                "./api/**/*",
+                ".prettierrc",
+                "package.json",
+                "tsconfig.json"
+            ]
+        }
+    ]
+}
