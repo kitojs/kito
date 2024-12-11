@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="./public/logo.png" alt="Kito Logo" width="120px" />
+<img src="./public/logo.png" alt="Kito Logo" width="150px" />
 
 A **web framework** written in **Rust** for **TypeScript**.
 
