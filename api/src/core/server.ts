@@ -1,4 +1,9 @@
-import { KitoConfig, KitoInterface, Request, Response } from '../types/server'
+import {
+	KitoConfig,
+	KitoInterface,
+	Request,
+	Response
+} from '~/src/types/server'
 
 class Kito implements KitoInterface {
 	readonly config: KitoConfig
