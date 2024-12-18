@@ -1,10 +1,6 @@
 {
   "name": "kito",
   "description": "Kito website and documentation",
-  "author": "Nehuén <https://github.com/nehu3n>",
-  "license": "MIT",
-  "homepage": "https://kito.pages.dev",
-  "repository": "https://github.com/nehu3n/kito/web",
   "type": "module",
   "version": "0.0.1",
   "scripts": {
