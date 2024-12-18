@@ -1,10 +1,15 @@
-[workspace]
-members = [
-  "rs_lib",
-]
+[package]
+name = "kito"
+description = "A web framework written in Rust for TypeScript"
+version = "0.1.0"
+authors = ["Nehuén <https://github.com/nehu3n>"]
+repository = "https://github.com/nehu3n/kito"
+license = "MIT"
+readme = "README.md"
+edition = "2021"
 
-[profile.release]
-codegen-units = 1
-incremental = true
-lto = true
-opt-level = "z"
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+actix-web = "4"
