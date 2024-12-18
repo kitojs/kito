@@ -3,7 +3,8 @@ import {
 	KitoInterface,
 	Request,
 	Response
-} from '~/src/types/server'
+} from '../types/server.d.ts'
+import { loadFunctions } from "./ffi/loader.ts";
 
 class Kito implements KitoInterface {
 	readonly config: KitoConfig
@@ -22,6 +23,13 @@ class Kito implements KitoInterface {
 			typeof options === 'number'
 				? { port: options, hostname: 'localhost' }
 				: { ...options, hostname: options.hostname || 'localhost' }
+
+		const lib = loadFunctions()!;
+
+		const encoder = new TextEncoder();
+        const hostPtr = Deno.UnsafePointer.of(encoder.encode(`${portConfig.hostname}\0`));
+
+		lib.symbols.run(hostPtr, portConfig.port);
 
 		callback?.()
 	}

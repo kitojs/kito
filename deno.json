@@ -1,12 +1,4 @@
 {
-  "tasks": {
-    "wasmbuild": "deno run -A jsr:@deno/wasmbuild@0.17.3"
-  },
-  "imports": {},
-  "compilerOptions": {
-    "lib": [
-      "ESNext"
-    ],
-    "strict": true
-  }
+  "tasks": {},
+  "imports": {}
 }
