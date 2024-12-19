@@ -13,3 +13,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 actix-web = "4"
+lazy_static = "1.5.0"

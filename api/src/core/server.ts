@@ -34,7 +34,20 @@ class Kito implements KitoInterface {
 		callback?.()
 	}
 
-	get(path: string, callback: (req: Request, res: Response) => void): void {}
+    get(path: string, callback: (req: Request, res: Response) => void): void {
+        const lib = loadFunctions()!;
+        const encoder = new TextEncoder();
+        const pathBytes = encoder.encode(`${path}\0`);
+        const methodBytes = encoder.encode(`GET\0`);
+
+        const pathBuffer = new Uint8Array(pathBytes);
+        const methodBuffer = new Uint8Array(methodBytes);
+
+        const pathPtr = Deno.UnsafePointer.of(pathBuffer);
+        const methodPtr = Deno.UnsafePointer.of(methodBuffer);
+
+        lib.symbols.add_route(pathPtr, methodPtr, 0);
+    }
 
 	post(path: string, callback: (req: Request, res: Response) => void): void {}
 
