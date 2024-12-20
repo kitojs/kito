@@ -6,6 +6,14 @@ import {
 } from '../types/server.d.ts'
 import { loadFunctions } from "./ffi/loader.ts";
 
+const routesId: Record<string, number> = {
+	"GET": 0,
+	"POST": 1,
+	"PUT": 2,
+	"PATCH": 3,
+	"DELETE": 4
+}
+
 class Kito implements KitoInterface {
 	readonly config: KitoConfig
     private lib: Deno.DynamicLibrary<Deno.ForeignLibraryInterface>
@@ -33,11 +41,11 @@ class Kito implements KitoInterface {
 
 		callback?.()
 	}
-
-    get(path: string, callback: (req: Request, res: Response) => void): void {
+	
+	private addRoute(path: string, method: string, callback: (req: Request, res: Response) => void): void {
         const encoder = new TextEncoder();
         const pathBytes = encoder.encode(`${path}\0`);
-        const methodBytes = encoder.encode(`GET\0`);
+        const methodBytes = encoder.encode(`${method}\0`);
 
         const pathBuffer = new Uint8Array(pathBytes);
         const methodBuffer = new Uint8Array(methodBytes);
@@ -45,69 +53,33 @@ class Kito implements KitoInterface {
         const pathPtr = Deno.UnsafePointer.of(pathBuffer);
         const methodPtr = Deno.UnsafePointer.of(methodBuffer);
 
-        this.lib.symbols.add_route(pathPtr, methodPtr, 0);
+        this.lib.symbols.add_route(pathPtr, methodPtr, routesId[method]);
+	}
+
+    get(path: string, callback: (req: Request, res: Response) => void): void {
+		this.addRoute(path, 'GET', callback)
     }
 
 	post(path: string, callback: (req: Request, res: Response) => void): void {
-        const encoder = new TextEncoder();
-        const pathBytes = encoder.encode(`${path}\0`);
-        const methodBytes = encoder.encode(`POST\0`);
-
-        const pathBuffer = new Uint8Array(pathBytes);
-        const methodBuffer = new Uint8Array(methodBytes);
-
-        const pathPtr = Deno.UnsafePointer.of(pathBuffer);
-        const methodPtr = Deno.UnsafePointer.of(methodBuffer);
-
-        this.lib.symbols.add_route(pathPtr, methodPtr, 1);
+		this.addRoute(path, 'POST', callback)
 	}
 
 	put(path: string, callback: (req: Request, res: Response) => void): void {
-        const encoder = new TextEncoder();
-        const pathBytes = encoder.encode(`${path}\0`);
-        const methodBytes = encoder.encode(`PUT\0`);
-
-        const pathBuffer = new Uint8Array(pathBytes);
-        const methodBuffer = new Uint8Array(methodBytes);
-
-        const pathPtr = Deno.UnsafePointer.of(pathBuffer);
-        const methodPtr = Deno.UnsafePointer.of(methodBuffer);
-
-        this.lib.symbols.add_route(pathPtr, methodPtr, 2);
+		this.addRoute(path, 'PUT', callback)
 	}
 
 	patch(
 		path: string,
 		callback: (req: Request, res: Response) => void
 	): void {
-        const encoder = new TextEncoder();
-        const pathBytes = encoder.encode(`${path}\0`);
-        const methodBytes = encoder.encode(`PATCH\0`);
-
-        const pathBuffer = new Uint8Array(pathBytes);
-        const methodBuffer = new Uint8Array(methodBytes);
-
-        const pathPtr = Deno.UnsafePointer.of(pathBuffer);
-        const methodPtr = Deno.UnsafePointer.of(methodBuffer);
-
-        this.lib.symbols.add_route(pathPtr, methodPtr, 3);
+		this.addRoute(path, 'PATCH', callback)
 	}
 
 	delete(
 		path: string,
 		callback: (req: Request, res: Response) => void
 	): void {
-        const encoder = new TextEncoder();
-        const pathBytes = encoder.encode(`${path}\0`);
-        const methodBytes = encoder.encode(`DELETE\0`);
-
-        const pathBuffer = new Uint8Array(pathBytes);
-        const methodBuffer = new Uint8Array(methodBytes);
-
-        const pathPtr = Deno.UnsafePointer.of(pathBuffer);
-        const methodPtr = Deno.UnsafePointer.of(methodBuffer);
-
-        this.lib.symbols.add_route(pathPtr, methodPtr, 4);
+		this.addRoute(path, 'DELETE', callback)
 	}
 }
 
