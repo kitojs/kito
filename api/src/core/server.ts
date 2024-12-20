@@ -49,19 +49,71 @@ class Kito implements KitoInterface {
         lib.symbols.add_route(pathPtr, methodPtr, 0);
     }
 
-	post(path: string, callback: (req: Request, res: Response) => void): void {}
+	post(path: string, callback: (req: Request, res: Response) => void): void {
+		const lib = loadFunctions()!;
+        const encoder = new TextEncoder();
+        const pathBytes = encoder.encode(`${path}\0`);
+        const methodBytes = encoder.encode(`POST\0`);
 
-	put(path: string, callback: (req: Request, res: Response) => void): void {}
+        const pathBuffer = new Uint8Array(pathBytes);
+        const methodBuffer = new Uint8Array(methodBytes);
+
+        const pathPtr = Deno.UnsafePointer.of(pathBuffer);
+        const methodPtr = Deno.UnsafePointer.of(methodBuffer);
+
+        lib.symbols.add_route(pathPtr, methodPtr, 1);
+	}
+
+	put(path: string, callback: (req: Request, res: Response) => void): void {
+		const lib = loadFunctions()!;
+        const encoder = new TextEncoder();
+        const pathBytes = encoder.encode(`${path}\0`);
+        const methodBytes = encoder.encode(`PUT\0`);
+
+        const pathBuffer = new Uint8Array(pathBytes);
+        const methodBuffer = new Uint8Array(methodBytes);
+
+        const pathPtr = Deno.UnsafePointer.of(pathBuffer);
+        const methodPtr = Deno.UnsafePointer.of(methodBuffer);
+
+        lib.symbols.add_route(pathPtr, methodPtr, 2);
+	}
 
 	patch(
 		path: string,
 		callback: (req: Request, res: Response) => void
-	): void {}
+	): void {
+		const lib = loadFunctions()!;
+        const encoder = new TextEncoder();
+        const pathBytes = encoder.encode(`${path}\0`);
+        const methodBytes = encoder.encode(`PATCH\0`);
+
+        const pathBuffer = new Uint8Array(pathBytes);
+        const methodBuffer = new Uint8Array(methodBytes);
+
+        const pathPtr = Deno.UnsafePointer.of(pathBuffer);
+        const methodPtr = Deno.UnsafePointer.of(methodBuffer);
+
+        lib.symbols.add_route(pathPtr, methodPtr, 3);
+	}
 
 	delete(
 		path: string,
 		callback: (req: Request, res: Response) => void
-	): void {}
+	): void {
+		const lib = loadFunctions()!;
+        const encoder = new TextEncoder();
+        const pathBytes = encoder.encode(`${path}\0`);
+        const methodBytes = encoder.encode(`DELETE\0`);
+
+        const pathBuffer = new Uint8Array(pathBytes);
+        const methodBuffer = new Uint8Array(methodBytes);
+
+        const pathPtr = Deno.UnsafePointer.of(pathBuffer);
+        const methodPtr = Deno.UnsafePointer.of(methodBuffer);
+
+        lib.symbols.add_route(pathPtr, methodPtr, 4);
+	}
 }
 
 function kito(options?: KitoConfig): Kito {

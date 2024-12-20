@@ -51,6 +51,38 @@ impl Server {
                                 }),
                             )
                         }
+                        1 => {
+                            app = app.route(
+                                path,
+                                web::post().to(|| async {
+                                    HttpResponse::Ok().body("POST route")
+                                }),
+                            )
+                        }
+                        2 => {
+                            app = app.route(
+                                path,
+                                web::put().to(|| async {
+                                    HttpResponse::Ok().body("PUT route")
+                                }),
+                            )
+                        }
+                        3 => {
+                            app = app.route(
+                                path,
+                                web::patch().to(|| async {
+                                    HttpResponse::Ok().body("PATCH route")
+                                }),
+                            )
+                        }
+                        4 => {
+                            app = app.route(
+                                path,
+                                web::delete().to(|| async {
+                                    HttpResponse::Ok().body("DELETE route")
+                                }),
+                            )
+                        }
                         _ => {}
                     }
                 }
