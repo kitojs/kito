@@ -25,26 +25,37 @@ pub extern "C" fn run(host: *mut c_char, port: u16) {
 }
 
 #[no_mangle]
-pub extern "C" fn add_route(path: *mut c_char, method: *mut c_char, method_type: u8) {
-    if path.is_null() || method.is_null() {
-        eprintln!("null path or method pointer");
+pub extern "C" fn add_routes(route_data: *mut u8, num_routes: usize) {
+    if route_data.is_null() {
+        eprintln!("null route data pointer");
         return;
     }
 
-    let path_str = unsafe {
-        CStr::from_ptr(path)
-            .to_str()
-            .expect("failed to convert path to UTF-8")
-            .to_string()
-    };
+    let slice = unsafe { std::slice::from_raw_parts(route_data, num_routes * 100) };
 
-    let method_str = unsafe {
-        CStr::from_ptr(method)
-            .to_str()
-            .expect("failed to convert method to UTF-8")
-            .to_string()
-    };
+    let mut offset = 0;
 
-    println!("route: {} {}", method_str, path_str);
-    Server::add_route(path_str, method_type);
+    for _ in 0..num_routes {
+        let path_len = slice[offset..].iter().position(|&b| b == 0).unwrap();
+        let path = String::from_utf8_lossy(&slice[offset..offset + path_len]).to_string();
+        offset += path_len + 1;
+
+        let method_len = slice[offset..].iter().position(|&b| b == 0).unwrap();
+        let method = String::from_utf8_lossy(&slice[offset..offset + method_len]).to_string();
+        offset += method_len + 1;
+
+        println!("route: {} {}", method, path);
+        Server::add_route(path, method_type_from_string(&method));
+    }
+}
+
+fn method_type_from_string(method: &str) -> u8 {
+    match method {
+        "GET" => 0,
+        "POST" => 1,
+        "PUT" => 2,
+        "PATCH" => 3,
+        "DELETE" => 4,
+        _ => 0,
+    }
 }
