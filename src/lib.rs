@@ -1,7 +1,7 @@
 mod server;
 
-use std::ffi::{c_char, CStr};
 use server::Server;
+use std::ffi::{c_char, CStr};
 
 #[no_mangle]
 pub extern "C" fn run(host: *mut c_char, port: u16) {

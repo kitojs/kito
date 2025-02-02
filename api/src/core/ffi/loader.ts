@@ -1,22 +1,22 @@
 import { FFI_FUNCTIONS_LIST } from "./functions.ts";
 
 export function getFFIPath(): string {
-  let suffix = "";
+  let lib = "";
   switch (Deno.build.os) {
     case "windows":
-      suffix = "dll";
+      lib = "kito.dll";
       break;
     case "darwin":
-      suffix = "dylib";
+      lib = "libkito.dylib";
       break;
     case "linux":
-      suffix = "so";
+      lib = "libkito.so";
       break;
     default:
       throw new Error("unsupported operating system");
   }
 
-  return `target/release/kito.${suffix}`;
+  return `target/release/${lib}`;
 }
 
 export function loadFunctions(): Deno.DynamicLibrary<
