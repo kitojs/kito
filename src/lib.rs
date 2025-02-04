@@ -3,6 +3,29 @@ mod server;
 use server::Server;
 use std::ffi::{c_char, CStr};
 
+static mut CALLBACK_PTR: Option<extern "C" fn(*const u8, usize) -> *const u8> = None;
+
+#[no_mangle]
+pub extern "C" fn register_callback(callback: extern "C" fn(*const u8, usize) -> *const u8) {
+    unsafe {
+        CALLBACK_PTR = Some(callback);
+    }
+}
+
+pub fn invoke_callback(data: &[u8]) -> Vec<u8> {
+    unsafe {
+        if let Some(callback) = CALLBACK_PTR {
+            let ptr = callback(data.as_ptr(), data.len());
+            if !ptr.is_null() {
+                let len = *(ptr as *const usize);
+                let bytes = std::slice::from_raw_parts(ptr.add(8), len);
+                return bytes.to_vec();
+            }
+        }
+    }
+    b"{}".to_vec()
+}
+
 #[no_mangle]
 pub extern "C" fn run(host: *mut c_char, port: u16) {
     if host.is_null() {

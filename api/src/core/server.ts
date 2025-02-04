@@ -16,17 +16,31 @@ const routesId: Record<string, number> = {
 
 type RouteInfo = { path: string, method: string, callback: (req: Request, res: Response) => void }
 
+globalThis.__responseBuffers = globalThis.__responseBuffers || [];
+
 class Kito implements KitoInterface {
   readonly config: KitoConfig;
   private lib: Deno.DynamicLibrary<Deno.ForeignLibraryInterface>;
   private routes: RouteInfo[] = [];
+  private routeMap: Map<string, (req: Request, res: Response) => void> = new Map();
 
   constructor(config?: KitoConfig) {
     const DEFAULT_CONFIG: KitoConfig = {};
 
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.lib = loadFunctions()!;
+
+    const handleRequestPtr = new Deno.UnsafeCallback(
+      {
+        parameters: ["pointer", "usize"],
+        result: "pointer",
+      },
+      (ptr: Deno.PointerValue, len: number) => this.handleRequest(ptr, len)
+    );
+
+    this.lib.symbols.register_callback(handleRequestPtr.pointer);
   }
+
 
   listen(
     options: { port: number; hostname?: string } | number,
@@ -77,12 +91,68 @@ class Kito implements KitoInterface {
     callback?.();
   }
 
-  private addRoute(
-    path: string,
-    method: string,
-    callback: (req: Request, res: Response) => void,
-  ): void {
-    this.routes.push({ path, method, callback })
+  private handleRequest(ptr: Deno.PointerValue, len: number): Deno.PointerValue {
+    const decoder = new TextDecoder();
+    const requestData = new Uint8Array(Deno.UnsafePointerView.getArrayBuffer(ptr, len));
+    const request = JSON.parse(decoder.decode(requestData));
+
+    console.log("received request:", request);
+
+    const callback = this.routeMap.get(`${request.method}:${request.path}`);
+    let responseJson = "";
+    if (callback) {
+      const res = {
+        body: "",
+        status: 200,
+        headers: {} as Record<string, string>,
+
+        send(body: string | object) {
+          this.body = typeof body === "string" ? body : JSON.stringify(body);
+          return this;
+        },
+        json(obj: object) {
+          this.body = JSON.stringify(obj);
+          return this;
+        },
+        status(code: number) {
+          this.status = code;
+          return this;
+        },
+        header(key: string, value: string) {
+          this.headers[key] = value;
+          return this;
+        },
+      };
+
+      callback(request, res as Response);
+
+      responseJson = JSON.stringify({
+        status: res.status,
+        headers: res.headers,
+        body: res.body,
+      });
+
+      console.log("sending response:", responseJson);
+    } else {
+      console.warn("no route found for:", request.method, request.path);
+      responseJson = JSON.stringify({ status: 404, body: "Not Found" });
+    }
+
+    const responseBytes = new TextEncoder().encode(responseJson);
+
+    const buffer = new Uint8Array(8 + responseBytes.length);
+    const dv = new DataView(buffer.buffer);
+    dv.setBigUint64(0, BigInt(responseBytes.length), true);
+    buffer.set(responseBytes, 8);
+
+    globalThis.__responseBuffers.push(buffer);
+
+    return Deno.UnsafePointer.of(buffer);
+  }
+
+  private addRoute(path: string, method: string, callback: (req: Request, res: Response) => void) {
+    this.routes.push({ path, method, callback });
+    this.routeMap.set(`${method}:${path}`, callback);
   }
 
   get(path: string, callback: (req: Request, res: Response) => void): void {
