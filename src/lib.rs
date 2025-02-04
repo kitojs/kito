@@ -32,7 +32,6 @@ pub extern "C" fn run(host: *mut c_char, port: u16) {
         eprintln!("null host pointer");
         return;
     }
-
     let host_str = unsafe {
         match CStr::from_ptr(host).to_str() {
             Ok(s) => s.to_string(),
@@ -42,7 +41,6 @@ pub extern "C" fn run(host: *mut c_char, port: u16) {
             }
         }
     };
-
     let server = Server::new(host_str, port);
     Server::listen(server);
 }
@@ -53,20 +51,15 @@ pub extern "C" fn add_routes(route_data: *mut u8, num_routes: usize) {
         eprintln!("null route data pointer");
         return;
     }
-
     let slice = unsafe { std::slice::from_raw_parts(route_data, num_routes * 100) };
-
     let mut offset = 0;
-
     for _ in 0..num_routes {
         let path_len = slice[offset..].iter().position(|&b| b == 0).unwrap();
         let path = String::from_utf8_lossy(&slice[offset..offset + path_len]).to_string();
         offset += path_len + 1;
-
         let method_len = slice[offset..].iter().position(|&b| b == 0).unwrap();
         let method = String::from_utf8_lossy(&slice[offset..offset + method_len]).to_string();
         offset += method_len + 1;
-
         println!("route: {} {}", method, path);
         Server::add_route(path, method_type_from_string(&method));
     }

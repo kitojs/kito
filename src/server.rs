@@ -1,8 +1,7 @@
 use actix_web::rt;
 use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer};
 use lazy_static::lazy_static;
-use serde_json::json;
-use std::collections::HashMap;
+use num_cpus;
 use std::sync::{Arc, Mutex};
 
 use crate::invoke_callback;
@@ -16,9 +15,9 @@ lazy_static! {
 }
 
 pub struct Server {
-    host: String,
-    port: u16,
-    routes: Arc<Mutex<Vec<(String, u8)>>>,
+    pub host: String,
+    pub port: u16,
+    pub routes: Arc<Mutex<Vec<(String, u8)>>>,
 }
 
 impl Server {
@@ -83,6 +82,7 @@ impl Server {
                 }
                 app
             })
+            .workers(num_cpus::get())
             .bind(&addr)
             .expect("failed to bind address")
             .run()
@@ -92,43 +92,39 @@ impl Server {
     }
 }
 
-pub async fn handle_request(req: HttpRequest, path: String, method: &str) -> HttpResponse {
-    let request_json = json!({
-        "method": method,
-        "path": path,
-        "headers": req.headers().iter().map(|(k, v)| (k.as_str(), v.to_str().unwrap_or(""))).collect::<HashMap<_, _>>(),
-        "query": req.query_string(),
-    });
+pub async fn handle_request(_req: HttpRequest, path: String, method: &str) -> HttpResponse {
+    let method_code: u8 = match method {
+        "GET" => 0,
+        "POST" => 1,
+        "PUT" => 2,
+        "PATCH" => 3,
+        "DELETE" => 4,
+        _ => 0,
+    };
+    let path_bytes = path.as_bytes();
+    let path_len = path_bytes.len() as u16;
+    let mut buffer = Vec::with_capacity(1 + 2 + path_bytes.len());
+    buffer.push(method_code);
+    buffer.extend_from_slice(&path_len.to_le_bytes());
+    buffer.extend_from_slice(path_bytes);
 
-    let request_bytes = serde_json::to_vec(&request_json).unwrap();
-    let response_bytes = invoke_callback(&request_bytes);
-
+    let response_bytes = invoke_callback(&buffer);
     if response_bytes.is_empty() {
         return HttpResponse::InternalServerError().body("empty response from callback");
     }
 
-    let response_str = String::from_utf8_lossy(&response_bytes);
-    println!("Rust received response: {}", response_str);
-
-    match serde_json::from_str::<serde_json::Value>(&response_str) {
-        Ok(response_json) => {
-            let status = response_json["status"].as_u64().unwrap_or(200) as u16;
-            let body = response_json["body"].as_str().unwrap_or("").to_string();
-
-            let mut builder = HttpResponse::build(
-                actix_web::http::StatusCode::from_u16(status)
-                    .unwrap_or(actix_web::http::StatusCode::OK),
-            );
-            if let Some(headers) = response_json["headers"].as_object() {
-                for (key, value) in headers {
-                    builder.insert_header((key.as_str(), value.as_str().unwrap_or("")));
-                }
-            }
-            builder.body(body)
-        }
-        Err(err) => {
-            println!("failed to parse response JSON: {}", err);
-            HttpResponse::InternalServerError().body("invalid response format")
-        }
+    if response_bytes.len() < 3 {
+        return HttpResponse::InternalServerError().body("invalid response format");
     }
+    let status = response_bytes[0];
+    let body_len = u16::from_le_bytes([response_bytes[1], response_bytes[2]]) as usize;
+    if response_bytes.len() < 3 + body_len {
+        return HttpResponse::InternalServerError().body("invalid response length");
+    }
+    let body = String::from_utf8_lossy(&response_bytes[3..3 + body_len]).to_string();
+    HttpResponse::build(
+        actix_web::http::StatusCode::from_u16(status as u16)
+            .unwrap_or(actix_web::http::StatusCode::OK),
+    )
+    .body(body)
 }
