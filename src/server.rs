@@ -2,9 +2,12 @@ use actix_web::rt;
 use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer};
 use lazy_static::lazy_static;
 use num_cpus;
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use crate::invoke_callback;
+use rmp_serde::{from_slice, to_vec};
+use serde_json::json;
 
 lazy_static! {
     static ref INSTANCE: Arc<Mutex<Server>> = Arc::new(Mutex::new(Server {
@@ -92,39 +95,39 @@ impl Server {
     }
 }
 
-pub async fn handle_request(_req: HttpRequest, path: String, method: &str) -> HttpResponse {
-    let method_code: u8 = match method {
-        "GET" => 0,
-        "POST" => 1,
-        "PUT" => 2,
-        "PATCH" => 3,
-        "DELETE" => 4,
-        _ => 0,
-    };
-    let path_bytes = path.as_bytes();
-    let path_len = path_bytes.len() as u16;
-    let mut buffer = Vec::with_capacity(1 + 2 + path_bytes.len());
-    buffer.push(method_code);
-    buffer.extend_from_slice(&path_len.to_le_bytes());
-    buffer.extend_from_slice(path_bytes);
+pub async fn handle_request(req: HttpRequest, path: String, method: &str) -> HttpResponse {
+    let request_obj = json!({
+        "method": method,
+        "path": path,
+        "headers": req
+            .headers()
+            .iter()
+            .map(|(k, v)| (k.as_str(), v.to_str().unwrap_or("")))
+            .collect::<HashMap<_, _>>(),
+        "query": req.query_string(),
+        "url": req.uri().to_string(),
+    });
 
-    let response_bytes = invoke_callback(&buffer);
+    let request_bytes = to_vec(&request_obj).unwrap();
+    let response_bytes = invoke_callback(&request_bytes);
     if response_bytes.is_empty() {
         return HttpResponse::InternalServerError().body("empty response from callback");
     }
 
-    if response_bytes.len() < 3 {
-        return HttpResponse::InternalServerError().body("invalid response format");
+    let response_obj: serde_json::Value = from_slice(&response_bytes).unwrap_or_else(|e| {
+        println!("failed to decode messagepack response: {}", e);
+        json!({"status":500, "body": "Internal Server Error"})
+    });
+    let status = response_obj["status"].as_u64().unwrap_or(200) as u16;
+    let body = response_obj["body"].as_str().unwrap_or("").to_string();
+
+    let mut builder = HttpResponse::build(
+        actix_web::http::StatusCode::from_u16(status).unwrap_or(actix_web::http::StatusCode::OK),
+    );
+    if let Some(headers) = response_obj["headers"].as_object() {
+        for (key, value) in headers {
+            builder.insert_header((key.as_str(), value.as_str().unwrap_or("")));
+        }
     }
-    let status = response_bytes[0];
-    let body_len = u16::from_le_bytes([response_bytes[1], response_bytes[2]]) as usize;
-    if response_bytes.len() < 3 + body_len {
-        return HttpResponse::InternalServerError().body("invalid response length");
-    }
-    let body = String::from_utf8_lossy(&response_bytes[3..3 + body_len]).to_string();
-    HttpResponse::build(
-        actix_web::http::StatusCode::from_u16(status as u16)
-            .unwrap_or(actix_web::http::StatusCode::OK),
-    )
-    .body(body)
+    builder.body(body)
 }

@@ -5,6 +5,7 @@ import {
   Response,
 } from "../types/server.d.ts";
 import { loadFunctions } from "./ffi/loader.ts";
+import { encode, decode } from "@msgpack/msgpack";
 
 const routesId: Record<string, number> = {
   "GET": 0,
@@ -87,36 +88,37 @@ class Kito implements KitoInterface {
   }
 
   private handleRequest(ptr: Deno.PointerValue, len: number): Deno.PointerValue {
-    const decoder = new TextDecoder();
-    const requestData = new Uint8Array(Deno.UnsafePointerView.getArrayBuffer(ptr, len));
-    const buffer = requestData.buffer;
-    const view = new DataView(buffer);
-    const methodCode = view.getUint8(0);
-    const pathLen = view.getUint16(1, true);
-    const fullArray = new Uint8Array(buffer);
-    const pathBytes = fullArray.slice(3, 3 + pathLen);
-    const path = new TextDecoder().decode(pathBytes);
+    const requestData = new Uint8Array(
+      Deno.UnsafePointerView.getArrayBuffer(ptr, len)
+    );
+    let request: any;
+    try {
+      request = decode(requestData);
+    } catch (e) {
+      console.error("failed to decode messagepack request:", e);
+      request = {};
+    }
 
-    const key = `${methodCode}:${path}`;
+    const method: string = request.method || "";
+    const path: string = request.path || "";
+
+    const key = `${routesId[method]}:${path}`;
     const routeCallback = this.routeMap.get(key);
     let responseBuffer: ArrayBuffer | undefined;
     if (routeCallback) {
       const res: Response & { _buffer?: ArrayBuffer } = {
         _buffer: undefined,
         send(body: string | object) {
-          const bodyStr =
-            typeof body === "string" ? body : JSON.stringify(body);
-          const bodyBytes = new TextEncoder().encode(bodyStr);
-          const buffer = new ArrayBuffer(1 + 2 + bodyBytes.length);
-          const view = new DataView(buffer);
-          view.setUint8(0, 200);
-          view.setUint16(1, bodyBytes.length, true);
-          new Uint8Array(buffer, 3).set(bodyBytes);
-          this._buffer = buffer;
-          return buffer;
+          const responseObj = { status: 200, headers: {}, body };
+          const encoded = encode(responseObj);
+          this._buffer = encoded.buffer.slice(
+            encoded.byteOffset,
+            encoded.byteOffset + encoded.byteLength
+          );
+          return this._buffer;
         },
         json(obj: object) {
-          return this.send(JSON.stringify(obj));
+          return this.send(obj);
         },
         status(code: number) {
           (this as any)._status = code;
@@ -127,7 +129,10 @@ class Kito implements KitoInterface {
         },
       };
 
-      const result = routeCallback({ method: "", path }, res);
+      const result = routeCallback(
+        { method, path, headers: request.headers, query: request.query, body: request.body, url: request.url },
+        res
+      );
       if (result instanceof ArrayBuffer) {
         responseBuffer = result;
       } else if (res._buffer) {
@@ -135,25 +140,19 @@ class Kito implements KitoInterface {
       }
       if (!responseBuffer) {
         console.warn("route callback did not produce a response");
-        const errorStr = "Internal Server Error";
-        const errorBytes = new TextEncoder().encode(errorStr);
-        const buf = new ArrayBuffer(1 + 2 + errorBytes.length);
-        const dv = new DataView(buf);
-        dv.setUint8(0, 500);
-        dv.setUint16(1, errorBytes.length, true);
-        new Uint8Array(buf, 3).set(errorBytes);
-        responseBuffer = buf;
+        const encoded = encode({ status: 500, headers: {}, body: "Internal Server Error" });
+        responseBuffer = encoded.buffer.slice(
+          encoded.byteOffset,
+          encoded.byteOffset + encoded.byteLength
+        );
       }
     } else {
-      console.warn("no route found for:", methodCode, path);
-      const errorStr = "Not Found";
-      const errorBytes = new TextEncoder().encode(errorStr);
-      const buf = new ArrayBuffer(1 + 2 + errorBytes.length);
-      const dv = new DataView(buf);
-      dv.setUint8(0, 404);
-      dv.setUint16(1, errorBytes.length, true);
-      new Uint8Array(buf, 3).set(errorBytes);
-      responseBuffer = buf;
+      console.warn("no route found for:", method, path);
+      const encoded = encode({ status: 404, headers: {}, body: "Not Found" });
+      responseBuffer = encoded.buffer.slice(
+        encoded.byteOffset,
+        encoded.byteOffset + encoded.byteLength
+      );
     }
 
     const payload = new Uint8Array(responseBuffer);

@@ -1,0 +1,23 @@
+{
+  "version": "4",
+  "specifiers": {
+    "npm:@msgpack/msgpack@^3.0.0-beta3": "3.0.0-beta3",
+    "npm:prettier@3.4.2": "3.4.2"
+  },
+  "npm": {
+    "@msgpack/msgpack@3.0.0-beta3": {
+      "integrity": "sha512-LZYWBmrkKO0quyjnJCeSaqHOcsuZUvE+hlIYRqFc0qI27dLnsOdnv8Fsj2cyitzQTJZmCPm53vZ/P8QTH7E84A=="
+    },
+    "prettier@3.4.2": {
+      "integrity": "sha512-e9MewbtFo+Fevyuxn/4rrcDAaq0IYxPGLvObpQjiZBMAzB9IGmzlnG9RZy3FFas+eBMu2vA0CszMeduow5dIuQ=="
+    }
+  },
+  "workspace": {
+    "packageJson": {
+      "dependencies": [
+        "npm:@msgpack/msgpack@^3.0.0-beta3",
+        "npm:prettier@3.4.2"
+      ]
+    }
+  }
+}
