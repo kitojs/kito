@@ -98,7 +98,6 @@ class Kito implements KitoInterface {
       console.error("failed to decode messagepack request:", e);
       request = {};
     }
-
     const method: string = request.method || "";
     const path: string = request.path || "";
 
@@ -106,11 +105,33 @@ class Kito implements KitoInterface {
     const routeCallback = this.routeMap.get(key);
     let responseBuffer: ArrayBuffer | undefined;
     if (routeCallback) {
-      const res: Response & { _buffer?: ArrayBuffer } = {
-        _buffer: undefined,
+      const res: Response & {
+        _buffer?: ArrayBuffer;
+        _status?: number;
+        _headers?: Record<string, string>;
+        _cookies?: string[];
+        _body?: string;
+      } = {
+        _status: 200,
+        _headers: {},
+        _cookies: [],
+        _body: "",
         send(body: string | object) {
-          const responseObj = { status: 200, headers: {}, body };
+          const bodyStr =
+            typeof body === "string" ? body : JSON.stringify(body);
+          this._body = bodyStr;
+
+          if (this._cookies && this._cookies.length > 0) {
+            this._headers!["Set-Cookie"] = this._cookies.join("; ");
+          }
+
+          const responseObj = {
+            status: this._status || 200,
+            headers: this._headers,
+            body: bodyStr,
+          };
           const encoded = encode(responseObj);
+
           this._buffer = encoded.buffer.slice(
             encoded.byteOffset,
             encoded.byteOffset + encoded.byteLength
@@ -121,11 +142,49 @@ class Kito implements KitoInterface {
           return this.send(obj);
         },
         status(code: number) {
-          (this as any)._status = code;
+          this._status = code;
           return this;
         },
         header(key: string, value: string) {
+          this._headers![key] = value;
           return this;
+        },
+        cookie(name: string, value: string, options?: any) {
+          let cookieStr = `${name}=${value}`;
+          if (options) {
+            if (options.maxAge) cookieStr += `; Max-Age=${options.maxAge}`;
+            if (options.domain) cookieStr += `; Domain=${options.domain}`;
+            if (options.path) cookieStr += `; Path=${options.path}`;
+            if (options.expires) cookieStr += `; Expires=${options.expires.toUTCString()}`;
+            if (options.httpOnly) cookieStr += `; HttpOnly`;
+            if (options.secure) cookieStr += `; Secure`;
+            if (options.sameSite) cookieStr += `; SameSite=${options.sameSite}`;
+          }
+          this._cookies!.push(cookieStr);
+          return this;
+        },
+        redirect(url: string) {
+          this.status(302);
+          this.header("Location", url);
+          return this.send("");
+        },
+        type(mime: string) {
+          return this.header("Content-Type", mime);
+        },
+        append(key: string, value: string) {
+          if (this._headers![key]) {
+            this._headers![key] += ", " + value;
+          } else {
+            this._headers![key] = value;
+          }
+          return this;
+        },
+        sendStatus(code: number) {
+          this.status(code);
+          return this.send("");
+        },
+        end() {
+          return this.send("");
         },
       };
 
@@ -164,7 +223,6 @@ class Kito implements KitoInterface {
 
     globalThis.__responseBuffers = globalThis.__responseBuffers || [];
     globalThis.__responseBuffers.push(finalBuffer);
-
     return Deno.UnsafePointer.of(new Uint8Array(finalBuffer));
   }
 
