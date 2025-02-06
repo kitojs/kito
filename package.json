@@ -1,19 +1,19 @@
 {
-  "name": "kito",
-  "version": "1.0.0",
-  "description": "A web framework written in Rust for TypeScript",
-  "readme": "README.md",
-  "repository": "https://github.com/nehu3n/kito",
-  "homepage": "https://kito.pages.dev",
-  "bugs": "https://github.com/nehu3n/kito/issues",
-  "main": "index.js",
-  "keywords": [],
-  "author": "Nehuén <https://github.com/nehu3n>",
-  "license": "MIT",
-  "dependencies": {
-    "@msgpack/msgpack": "^3.0.0-beta3"
-  },
-  "devDependencies": {
-    "prettier": "3.4.2"
-  }
+	"name": "kito",
+	"version": "1.0.0",
+	"description": "A web framework written in Rust for TypeScript",
+	"readme": "README.md",
+	"repository": "https://github.com/nehu3n/kito",
+	"homepage": "https://kito.pages.dev",
+	"bugs": "https://github.com/nehu3n/kito/issues",
+	"main": "index.js",
+	"keywords": [],
+	"author": "Nehuén <https://github.com/nehu3n>",
+	"license": "MIT",
+	"dependencies": {
+		"@msgpack/msgpack": "^3.0.0-beta3"
+	},
+	"devDependencies": {
+		"prettier": "3.4.2"
+	}
 }
