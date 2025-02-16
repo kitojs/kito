@@ -13,55 +13,55 @@ const servers = [
 	{
 		name: 'fastify',
 		runner: 'node',
-		args: ['--experimental-strip-types'],
+		args: ['--no-warnings', '--experimental-strip-types'],
 		extension: 'ts'
 	},
 	{
 		name: 'hono',
 		runner: 'node',
-		args: ['--experimental-strip-types'],
+		args: ['--no-warnings', '--experimental-strip-types'],
 		extension: 'ts'
 	},
 	{
 		name: 'hapi',
 		runner: 'node',
-		args: ['--experimental-strip-types'],
+		args: ['--no-warnings', '--experimental-strip-types'],
 		extension: 'ts'
 	},
 	{
 		name: 'express',
 		runner: 'node',
-		args: ['--experimental-strip-types'],
+		args: ['--no-warnings', '--experimental-strip-types'],
 		extension: 'mjs'
 	},
 	{
 		name: 'koa',
 		runner: 'node',
-		args: ['--experimental-strip-types'],
+		args: ['--no-warnings', '--experimental-strip-types'],
 		extension: 'ts'
 	},
 	{
 		name: 'polka',
 		runner: 'node',
-		args: ['--experimental-strip-types'],
+		args: ['--no-warnings', '--experimental-strip-types'],
 		extension: 'ts'
 	},
 	{
 		name: 'rayo',
 		runner: 'node',
-		args: ['--experimental-strip-types'],
+		args: ['--no-warnings', '--experimental-strip-types'],
 		extension: 'ts'
 	},
 	{
 		name: 'restify',
 		runner: 'node',
-		args: ['--experimental-strip-types'],
+		args: ['--no-warnings', '--experimental-strip-types'],
 		extension: 'ts'
 	},
 	{
 		name: 'tinyhttp',
 		runner: 'node',
-		args: ['--experimental-strip-types'],
+		args: ['--no-warnings', '--experimental-strip-types'],
 		extension: 'ts'
 	}
 ]
