@@ -10,6 +10,9 @@
 	"keywords": [],
 	"author": "Nehuén <https://github.com/nehu3n>",
 	"license": "MIT",
+	"scripts": {
+		"fmt:prettier": "prettier --config .prettierrc -w ."
+	},
 	"dependencies": {
 		"@msgpack/msgpack": "^3.0.0-beta3"
 	},
