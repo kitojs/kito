@@ -7,7 +7,7 @@ export const startServer = (name, runner, args, extension) => {
 
 		const server = spawn(
 			runner,
-			[...args, `bench/servers/${name}.${extension}`],
+			[...args, `./servers/${name}.${extension}`],
 			{
 				stdio: 'inherit'
 			}

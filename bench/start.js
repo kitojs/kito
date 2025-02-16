@@ -103,7 +103,7 @@ const init = () => {
 	const method = options.method ? options.method : 'GET'
 	const pipelining = options.pipelining ? parseInt(options.pipelining) : 10
 	const noImage = !options.image
-	const imagePath = options.imagePath || './bench/charts/results.jpeg'
+	const imagePath = options.imagePath || './charts/results.jpeg'
 
 	run({
 		url,
