@@ -1,6 +1,9 @@
 import { spawn } from 'node:child_process'
 import autocannon from 'autocannon'
 import chalk from 'chalk'
+import { createCanvas } from 'canvas'
+import { Chart } from 'chart.js/auto'
+import fs from 'fs'
 
 import {
 	URL,
@@ -66,6 +69,78 @@ const runBenchmark = (name) => {
 	})
 }
 
+const generateChart = () => {
+	const width = 800
+	const height = 400
+	const canvas = createCanvas(width, height)
+	const ctx = canvas.getContext('2d')
+
+	ctx.fillStyle = '#ffffff'
+	ctx.fillRect(0, 0, width, height)
+
+	const chartConfig = {
+		type: 'bar',
+		data: {
+			labels: results.map((result) => result.name),
+			datasets: [
+				{
+					label: 'Req/s',
+					data: results.map((result) => result.reqPerSec),
+					backgroundColor: 'rgba(75, 192, 192, 1)',
+					borderColor: 'rgba(75, 192, 192, 1)',
+					borderWidth: 1,
+					yAxisID: 'reqs'
+				},
+				{
+					label: 'Latency (ms)',
+					data: results.map((result) => result.latency),
+					backgroundColor: 'rgba(255, 99, 132, 1)',
+					borderColor: 'rgba(255, 99, 132, 1)',
+					borderWidth: 1,
+					yAxisID: 'latency'
+				}
+			]
+		},
+		options: {
+			responsive: false,
+			maintainAspectRatio: false,
+			scales: {
+				reqs: {
+					type: 'linear',
+					position: 'left',
+					ticks: {
+						beginAtZero: true
+					}
+				},
+				latency: {
+					type: 'linear',
+					position: 'right',
+					ticks: {
+						beginAtZero: true
+					}
+				}
+			},
+			plugins: {
+				legend: {
+					position: 'top'
+				},
+				title: {
+					display: true,
+					text: 'Benchmark Results'
+				}
+			}
+		}
+	}
+
+	new Chart(ctx, chartConfig)
+
+	const buffer = canvas.toBuffer('image/jpeg')
+	const outputPath = './bench/charts/results.jpeg'
+	fs.writeFileSync(outputPath, buffer)
+
+	console.log(chalk.green(`\nChart saved to ${outputPath}`))
+}
+
 const run = async () => {
 	for (const { name, runner, args, extension } of servers) {
 		const srv = await startServer(name, runner, args, extension)
@@ -91,7 +166,7 @@ const run = async () => {
 		server.reqPerSec > max.reqPerSec ? server : max
 	)
 	console.log(
-		chalk.green(
+		chalk.magenta(
 			`\nThe fastest server was ${chalk.bold(fastest.name)} with ${chalk.bold(
 				fastest.reqPerSec.toFixed(2)
 			)} req/s.`
@@ -103,11 +178,13 @@ const run = async () => {
 	)
 	console.log(
 		chalk.blue(
-			`\nThe server with the best latency was ${chalk.bold(bestLatency.name)} with ${chalk.bold(
+			`The server with the best latency was ${chalk.bold(bestLatency.name)} with ${chalk.bold(
 				bestLatency.latency.toFixed(2)
 			)} ms.`
 		)
 	)
+
+	generateChart()
 }
 
 run().catch((err) => console.error(chalk.red(err)))
