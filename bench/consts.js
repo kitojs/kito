@@ -1,11 +1,3 @@
-// autocannon options:
-const PORT = 3000
-const URL = `http://localhost:${PORT}`
-const CONNECTIONS = 100
-const DURATION = 10
-const METHOD = 'GET'
-const PIPELINING = 10
-
 const results = []
 
 const servers = [
@@ -66,13 +58,4 @@ const servers = [
 	}
 ]
 
-export {
-	PORT,
-	URL,
-	CONNECTIONS,
-	DURATION,
-	METHOD,
-	PIPELINING,
-	results,
-	servers
-}
+export { results, servers }
