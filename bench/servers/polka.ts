@@ -1,7 +1,7 @@
-import polka from 'polka'
+import polka from 'polka';
 
 polka()
-	.get('/', (req, res) => {
-		res.end('Hello, world!')
-	})
-	.listen(3000)
+  .get('/', (req, res) => {
+    res.end('Hello, world!');
+  })
+  .listen(3000);

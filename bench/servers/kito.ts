@@ -1,9 +1,9 @@
-import { kito } from '../../api/src/core/server.ts'
+import { kito } from '../../api/src/core/server.ts';
 
-const app = kito()
+const app = kito();
 
 app.get('/', (req, res) => {
-	res.send('Hello, world!')
-})
+  res.send('Hello, world!');
+});
 
-app.listen(3000)
+app.listen(3000);

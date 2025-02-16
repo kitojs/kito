@@ -1,9 +1,9 @@
-import Fastify from 'fastify'
+import Fastify from 'fastify';
 
-const fastify = Fastify()
+const fastify = Fastify();
 
 fastify.get('/', function (request, reply) {
-	reply.send('Hello, world!')
-})
+  reply.send('Hello, world!');
+});
 
-fastify.listen({ port: 3000 })
+fastify.listen({ port: 3000 });

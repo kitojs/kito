@@ -1,9 +1,9 @@
-import { App } from '@tinyhttp/app'
+import { App } from '@tinyhttp/app';
 
-const app = new App()
+const app = new App();
 
 app.get('/', (req, res) => {
-	res.send('Hello, world!')
-})
+  res.send('Hello, world!');
+});
 
-app.listen(3000)
+app.listen(3000);

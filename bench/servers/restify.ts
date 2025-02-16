@@ -1,10 +1,10 @@
-import restify from 'restify'
+import restify from 'restify';
 
-const server = restify.createServer()
+const server = restify.createServer();
 
 server.get('/', (req, res, next) => {
-	res.send('Hello, world!')
-	next()
-})
+  res.send('Hello, world!');
+  next();
+});
 
-server.listen(3000)
+server.listen(3000);

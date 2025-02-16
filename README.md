@@ -34,15 +34,15 @@ deno add jsr:kito
 A simple example of an API with a route:
 
 ```typescript
-import { kito } from 'kito'
+import { kito } from 'kito';
 
-const app = kito()
+const app = kito();
 
 app.get('/', (req, res) => {
-	res.send('Hello, world!')
-})
+  res.send('Hello, world!');
+});
 
-app.listen(3000)
+app.listen(3000);
 ```
 
 Your server is running on `http://localhost:3000`, responding with "Hello,
