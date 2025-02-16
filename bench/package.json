@@ -1,0 +1,20 @@
+{
+	"dependencies": {
+		"@hapi/hapi": "^21.3.12",
+		"@hono/node-server": "^1.13.8",
+		"@tinyhttp/app": "^2.5.0",
+		"express": "^4.21.2",
+		"fastify": "^5.2.1",
+		"hono": "^4.7.1",
+		"koa": "^2.15.4",
+		"polka": "^0.5.2",
+		"rayo": "^1.4.6",
+		"restify": "^11.1.0",
+		"autocannon": "^8.0.0",
+		"chalk": "^5.4.1"
+	},
+	"type": "module",
+	"devDependencies": {
+		"@types/node": "^22.13.4"
+	}
+}
