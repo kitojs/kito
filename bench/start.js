@@ -11,13 +11,13 @@ const run = async ({
 	duration,
 	method,
 	pipelining,
-	noImage,
-	imagePath
+	genChartImage,
+	chartImagePath
 }) => {
-	if (noImage) {
+	if (genChartImage) {
 		console.log(
 			chalk.yellow(
-				'The --no-image flag is active, the chart image will not be generated.'
+				`The --chart flag was set, a chart image will be generated at ${chartImagePath} with the results.`
 			)
 		)
 	}
@@ -66,7 +66,7 @@ const run = async ({
 		)
 	)
 
-	if (!noImage) generateChart(imagePath)
+	if (genChartImage) generateChart(chartImagePath)
 }
 
 const init = () => {
@@ -85,12 +85,15 @@ const init = () => {
 		)
 		.option('-m, --method <method>', 'HTTP Method')
 		.option('--pipelining <pipelining>', 'Number of pipelining requests')
-		.option('--ni, --no-image', 'Disable chart image generation')
-		.option('--imp, --image-path <path>', 'Path to save the image')
+		.option('--ch, --chart', 'Enable chart image generation')
+		.option(
+			'--cip, --chart-image-path <path>',
+			'Path to save the chart image'
+		)
 
 	program.parse(process.argv)
-
 	const options = program.opts()
+
 	const url =
 		options.url ||
 		(options.port
@@ -102,8 +105,8 @@ const init = () => {
 	const duration = options.duration ? parseInt(options.duration) : 40
 	const method = options.method ? options.method : 'GET'
 	const pipelining = options.pipelining ? parseInt(options.pipelining) : 10
-	const noImage = !options.image
-	const imagePath = options.imagePath || './charts/results.jpeg'
+	const genChartImage = options.chart
+	const chartImagePath = options.chartImagePath || './charts/results.jpeg'
 
 	run({
 		url,
@@ -111,8 +114,8 @@ const init = () => {
 		duration,
 		method,
 		pipelining,
-		noImage,
-		imagePath
+		genChartImage,
+		chartImagePath
 	}).catch((err) => console.error(chalk.red(err)))
 }
 
