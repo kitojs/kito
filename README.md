@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="./public/logo.png" alt="Kito Logo" width="150px" />
+<img src="https://github.com/kitojs/.github/blob/ab511c572ae2362cd1cc33737536835db3284e96/logo.png" alt="Kito Logo" width="150px" />
 
 A **web framework** written in **Rust** for **TypeScript**.
 
@@ -34,15 +34,15 @@ deno add jsr:kito
 A simple example of an API with a route:
 
 ```typescript
-import { kito } from "kito";
+import { kito } from 'kito'
 
-const app = kito();
+const app = kito()
 
-app.get("/", (req, res) => {
-  res.send("Hello, world!");
-});
+app.get('/', (req, res) => {
+	res.send('Hello, world!')
+})
 
-app.listen(3000);
+app.listen(3000)
 ```
 
 Your server is running on `http://localhost:3000`, responding with "Hello,
