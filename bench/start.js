@@ -1,147 +1,9 @@
-import { spawn } from 'node:child_process'
-import autocannon from 'autocannon'
 import chalk from 'chalk'
-import { createCanvas } from 'canvas'
-import { Chart } from 'chart.js/auto'
-import fs from 'fs'
 import { program } from 'commander'
-
 import { results, servers } from './consts.js'
-
-// autocannon variables
-let port, url, connections, duration, method, pipelining
-
-const startServer = (name, runner, args, extension) => {
-	return new Promise((resolve, reject) => {
-		console.log(chalk.cyan(`\nStarting server ${name}...`))
-
-		const server = spawn(
-			runner,
-			[...args, `bench/servers/${name}.${extension}`],
-			{
-				stdio: 'inherit'
-			}
-		)
-
-		setTimeout(() => resolve(server), 2000)
-	})
-}
-
-const stopServer = (server, name) => {
-	return new Promise((resolve) => {
-		console.log(chalk.red(`\nShutting down server ${name}...`))
-		server.kill()
-		setTimeout(resolve, 1000)
-	})
-}
-
-const runBenchmark = ({
-	name,
-	url,
-	connections,
-	duration,
-	method,
-	pipelining
-}) => {
-	return new Promise((resolve, reject) => {
-		console.log(chalk.blue(`\nBenchmarking ${name}...`))
-
-		autocannon(
-			{
-				url,
-				connections,
-				duration,
-				method,
-				pipelining
-			},
-			(err, result) => {
-				if (err) return reject(err)
-
-				const reqPerSec = result.requests.average
-				const latency = result.latency.average
-				results.push({ name, reqPerSec, latency })
-
-				console.log(
-					chalk.green(
-						`${name} - req/s: ${reqPerSec.toFixed(2)}, latency: ${latency.toFixed(2)} ms`
-					)
-				)
-				resolve()
-			}
-		)
-	})
-}
-
-const generateChart = (outputPath) => {
-	const width = 800
-	const height = 400
-	const canvas = createCanvas(width, height)
-	const ctx = canvas.getContext('2d')
-
-	ctx.fillStyle = '#ffffff'
-	ctx.fillRect(0, 0, width, height)
-
-	const chartConfig = {
-		type: 'bar',
-		data: {
-			labels: results.map((result) => result.name),
-			datasets: [
-				{
-					label: 'Req/s',
-					data: results.map((result) => result.reqPerSec),
-					backgroundColor: 'rgba(75, 192, 192, 1)',
-					borderColor: 'rgba(75, 192, 192, 1)',
-					borderWidth: 1,
-					yAxisID: 'reqs'
-				},
-				{
-					label: 'Latency (ms)',
-					data: results.map((result) => result.latency),
-					backgroundColor: 'rgba(255, 99, 132, 1)',
-					borderColor: 'rgba(255, 99, 132, 1)',
-					borderWidth: 1,
-					yAxisID: 'latency'
-				}
-			]
-		},
-		options: {
-			responsive: false,
-			maintainAspectRatio: false,
-			scales: {
-				reqs: {
-					type: 'linear',
-					position: 'left',
-					ticks: {
-						beginAtZero: true
-					}
-				},
-				latency: {
-					type: 'linear',
-					position: 'right',
-					ticks: {
-						beginAtZero: true
-					}
-				}
-			},
-			plugins: {
-				legend: {
-					position: 'top'
-				},
-				title: {
-					display: true,
-					text: 'Benchmark Results'
-				}
-			}
-		}
-	}
-
-	new Chart(ctx, chartConfig)
-
-	const buffer = canvas.toBuffer('image/jpeg')
-	fs.writeFileSync(outputPath, buffer)
-
-	console.log(chalk.green(`\nChart saved to ${outputPath}`))
-}
+import { startServer, stopServer } from './utils/server.js'
+import { runBenchmark } from './utils/benchmark.js'
+import { generateChart } from './utils/chart.js'
 
 const run = async ({
 	url,
@@ -174,11 +36,6 @@ const run = async ({
 	}
 
 	console.log(chalk.yellow('\nBenchmark results:'))
-	console.log(
-		chalk.white(
-			`Duration: ${duration}\nConnections: ${connections}\nURL: ${URL}\nMethod: ${method}\nPipelining: ${pipelining}\n`
-		)
-	)
 	console.table(
 		results.map(({ name, reqPerSec, latency }) => ({
 			Server: name,
@@ -218,7 +75,6 @@ const init = () => {
 		.description(
 			'Benchmarking Kito against other JavaScript web frameworks.'
 		)
-
 	program
 		.option('-u, --url <url>', 'Server URL')
 		.option('-p, --port <port>', 'Server port')
@@ -235,20 +91,19 @@ const init = () => {
 	program.parse(process.argv)
 
 	const options = program.opts()
-
-	url =
+	const url =
 		options.url ||
 		(options.port
 			? `http://localhost:${options.port}`
 			: 'http://localhost:3000')
-	connections = options.connections ? parseInt(options.connections) : 100
-	duration = options.duration ? parseInt(options.duration) : 40
-	method = options.method ? options.method : 'GET'
-	pipelining = options.pipelining ? parseInt(options.pipelining) : 10
+	const connections = options.connections
+		? parseInt(options.connections)
+		: 100
+	const duration = options.duration ? parseInt(options.duration) : 40
+	const method = options.method ? options.method : 'GET'
+	const pipelining = options.pipelining ? parseInt(options.pipelining) : 10
 	const noImage = !options.image
-	const imagePath = options.imagePath
-		? options.imagePath
-		: './bench/charts/results.jpeg'
+	const imagePath = options.imagePath || './bench/charts/results.jpeg'
 
 	run({
 		url,
