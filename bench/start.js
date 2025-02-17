@@ -96,7 +96,8 @@ const init = () => {
   const method = options.method ? options.method : 'GET';
   const pipelining = options.pipelining ? parseInt(options.pipelining) : 10;
   const genChartImage = options.chart;
-  const chartImagePath = options.chartImagePath || './charts/results.jpeg';
+  const chartImagePath =
+    options.chartImagePath || './bench/charts/results.jpeg';
 
   run({
     url,

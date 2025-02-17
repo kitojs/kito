@@ -16,9 +16,6 @@
     "rayo": "^1.4.6",
     "restify": "^11.1.0"
   },
-  "scripts": {
-    "bench": "node start.js"
-  },
   "type": "module",
   "devDependencies": {
     "@types/node": "^22.13.4"

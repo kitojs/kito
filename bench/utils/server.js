@@ -5,9 +5,13 @@ export const startServer = (name, runner, args, extension) => {
   return new Promise((resolve, reject) => {
     console.log(chalk.cyan(`\nStarting server ${name}...`));
 
-    const server = spawn(runner, [...args, `./servers/${name}.${extension}`], {
-      stdio: 'inherit',
-    });
+    const server = spawn(
+      runner,
+      [...args, `./bench/servers/${name}.${extension}`],
+      {
+        stdio: 'inherit',
+      },
+    );
 
     setTimeout(() => resolve(server), 2000);
   });

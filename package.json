@@ -11,7 +11,8 @@
   "author": "Nehuén <https://github.com/nehu3n>",
   "license": "MIT",
   "scripts": {
-    "fmt:prettier": "prettier --config .prettierrc -w ."
+    "fmt:prettier": "prettier --config .prettierrc -w .",
+    "bench": "node bench/start.js"
   },
   "dependencies": {
     "@msgpack/msgpack": "^3.0.0-beta3"
