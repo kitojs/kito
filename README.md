@@ -5,7 +5,7 @@
 
 <div align="center">
 
-<img src="https://github.com/kitojs/.github/blob/88354c84e2c05a5f661bf0a45a734bc5ad69f47e/banner.png" alt="Kito banner" height="270px" />
+<img src="https://github.com/kitojs/.github/blob/88354c84e2c05a5f661bf0a45a734bc5ad69f47e/banner.png" alt="Kito banner" height="170px" />
 
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/kitojs/kito/ci.yml?branch=main)](https://github.com/kitojs/kito/actions)
 [![GitHub](https://img.shields.io/github/license/kitojs/kito)](https://github.com/kitojs/kito/blob/main/LICENSE)
@@ -34,7 +34,7 @@ app.listen(3000);
 
 Kito is **the fastest backend framework** in the JavaScript ecosystem. By leveraging the performance of **Rust**, Kito outperforms traditional frameworks like Express by an incredible margin. To put it in perspective: **Kito is +900% faster than Express**.
 
-<img src="./bench/charts/results.jpeg" alt="Benchmark chart results" height="500px" width="10000px" />
+<img src="./bench/charts/results.jpeg" alt="Benchmark chart results" width="10000px" />
 
 > **Req/s**: Higher is better.  
 > **Latency**: Lower is better.
