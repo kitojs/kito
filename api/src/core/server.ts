@@ -29,6 +29,7 @@ class Kito implements KitoInterface {
     string,
     (req: Request, res: Response) => ArrayBuffer | void
   > = new Map();
+  private routesBuffer?: Uint8Array;
 
   constructor(config?: KitoConfig) {
     const DEFAULT_CONFIG: KitoConfig = {};
@@ -56,36 +57,31 @@ class Kito implements KitoInterface {
         : { ...options, hostname: options.hostname || 'localhost' };
 
     const encoder = new TextEncoder();
-    const hostPtr = Deno.UnsafePointer.of(
-      encoder.encode(`${portConfig.hostname}\0`),
-    );
+    const hostStr = `${portConfig.hostname}\0`;
+    const hostPtr = Deno.UnsafePointer.of(encoder.encode(hostStr));
 
-    const routes = this.routes.map((route) => ({
-      path: route.path,
-      method: route.method,
-      methodId: routesId[route.method],
-    }));
+    if (!this.routesBuffer) {
+      let totalSize = 0;
+      for (const route of this.routes) {
+        totalSize += route.path.length + route.method.length + 2;
+      }
 
-    let totalSize = 0;
-    for (const route of routes) {
-      totalSize += route.path.length + route.method.length + 2;
+      this.routesBuffer = new Uint8Array(totalSize);
+      let offset = 0;
+      for (const route of this.routes) {
+        const pathBytes = encoder.encode(route.path);
+        this.routesBuffer.set(pathBytes, offset);
+        offset += pathBytes.length;
+        this.routesBuffer[offset++] = 0;
+        const methodBytes = encoder.encode(route.method);
+        this.routesBuffer.set(methodBytes, offset);
+        offset += methodBytes.length;
+        this.routesBuffer[offset++] = 0;
+      }
     }
+    const routePtr = Deno.UnsafePointer.of(this.routesBuffer);
 
-    const routeData = new Uint8Array(totalSize);
-    let offset = 0;
-    for (const route of routes) {
-      const pathBytes = encoder.encode(route.path);
-      routeData.set(pathBytes, offset);
-      offset += pathBytes.length;
-      routeData[offset++] = 0;
-      const methodBytes = encoder.encode(route.method);
-      routeData.set(methodBytes, offset);
-      offset += methodBytes.length;
-      routeData[offset++] = 0;
-    }
-    const routePtr = Deno.UnsafePointer.of(routeData);
-
-    this.lib.symbols.add_routes(routePtr, routes.length);
+    this.lib.symbols.add_routes(routePtr, this.routes.length);
     this.lib.symbols.run(hostPtr, portConfig.port);
 
     callback?.();

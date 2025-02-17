@@ -2,7 +2,7 @@ use actix_web::cookie::Cookie as ActixCookie;
 use actix_web::http::header;
 use actix_web::rt;
 use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer};
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use num_cpus;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -12,18 +12,16 @@ use rmp_serde::{from_slice, to_vec};
 use serde::Deserialize;
 use serde_json::json;
 
-lazy_static! {
-    static ref INSTANCE: Arc<Mutex<Server>> = Arc::new(Mutex::new(Server {
-        host: "127.0.0.1".to_string(),
-        port: 3000,
-        routes: Arc::new(Mutex::new(vec![])),
-    }));
-}
+static INSTANCE: Lazy<Arc<Mutex<Server>>> = Lazy::new(|| Arc::new(Mutex::new(Server {
+    host: "127.0.0.1".to_string(),
+    port: 3000,
+    routes: Mutex::new(vec![]),
+})));
 
 pub struct Server {
     pub host: String,
     pub port: u16,
-    pub routes: Arc<Mutex<Vec<(String, u8)>>>,
+    pub routes: Mutex<Vec<(String, u8)>>,
 }
 
 impl Server {
@@ -31,6 +29,7 @@ impl Server {
         let mut server = INSTANCE.lock().unwrap();
         server.host = host;
         server.port = port;
+        drop(server);
         INSTANCE.clone()
     }
 
@@ -43,48 +42,75 @@ impl Server {
     pub fn listen(server: Arc<Mutex<Server>>) {
         let server_guard = server.lock().unwrap();
         let addr = format!("{}:{}", server_guard.host, server_guard.port);
-        let routes = server_guard.routes.clone();
+        let routes_vec = {
+            let routes_lock = server_guard.routes.lock().unwrap();
+            routes_lock.clone()
+        };
+        drop(server_guard);
 
         rt::System::new().block_on(async move {
             HttpServer::new(move || {
                 let mut app = App::new();
-                let routes = routes.lock().unwrap();
-
-                for (path, method) in routes.iter() {
+                for (path, method) in &routes_vec {
                     let path_clone = path.clone();
-                    app = match method {
-                        0 => app.route(
-                            &path,
-                            web::get().to(move |req: HttpRequest| {
-                                handle_request(req.clone(), path_clone.clone(), "GET")
-                            }),
-                        ),
-                        1 => app.route(
-                            &path,
-                            web::post().to(move |req: HttpRequest| {
-                                handle_request(req.clone(), path_clone.clone(), "POST")
-                            }),
-                        ),
-                        2 => app.route(
-                            &path,
-                            web::put().to(move |req: HttpRequest| {
-                                handle_request(req.clone(), path_clone.clone(), "PUT")
-                            }),
-                        ),
-                        3 => app.route(
-                            &path,
-                            web::patch().to(move |req: HttpRequest| {
-                                handle_request(req.clone(), path_clone.clone(), "PATCH")
-                            }),
-                        ),
-                        4 => app.route(
-                            &path,
-                            web::delete().to(move |req: HttpRequest| {
-                                handle_request(req.clone(), path_clone.clone(), "DELETE")
-                            }),
-                        ),
-                        _ => app,
-                    };
+                    match method {
+                        0 => {
+                            app = app.route(
+                                &path_clone,
+                                web::get().to({
+                                    let path_inner = path_clone.clone();
+                                    move |req: HttpRequest| {
+                                        handle_request(req, path_inner.clone(), "GET")
+                                    }
+                                }),
+                            )
+                        }
+                        1 => {
+                            app = app.route(
+                                &path_clone,
+                                web::post().to({
+                                    let path_inner = path_clone.clone();
+                                    move |req: HttpRequest| {
+                                        handle_request(req, path_inner.clone(), "POST")
+                                    }
+                                }),
+                            )
+                        }
+                        2 => {
+                            app = app.route(
+                                &path_clone,
+                                web::put().to({
+                                    let path_inner = path_clone.clone();
+                                    move |req: HttpRequest| {
+                                        handle_request(req, path_inner.clone(), "PUT")
+                                    }
+                                }),
+                            )
+                        }
+                        3 => {
+                            app = app.route(
+                                &path_clone,
+                                web::patch().to({
+                                    let path_inner = path_clone.clone();
+                                    move |req: HttpRequest| {
+                                        handle_request(req, path_inner.clone(), "PATCH")
+                                    }
+                                }),
+                            )
+                        }
+                        4 => {
+                            app = app.route(
+                                &path_clone,
+                                web::delete().to({
+                                    let path_inner = path_clone.clone();
+                                    move |req: HttpRequest| {
+                                        handle_request(req, path_inner.clone(), "DELETE")
+                                    }
+                                }),
+                            )
+                        }
+                        _ => {}
+                    }
                 }
                 app
             })

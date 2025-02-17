@@ -6,12 +6,14 @@ use std::ffi::{c_char, CStr};
 static mut CALLBACK_PTR: Option<extern "C" fn(*const u8, usize) -> *const u8> = None;
 
 #[no_mangle]
+#[inline(always)]
 pub extern "C" fn register_callback(callback: extern "C" fn(*const u8, usize) -> *const u8) {
     unsafe {
         CALLBACK_PTR = Some(callback);
     }
 }
 
+#[inline(always)]
 pub fn invoke_callback(data: &[u8]) -> Vec<u8> {
     unsafe {
         if let Some(callback) = CALLBACK_PTR {
@@ -27,6 +29,7 @@ pub fn invoke_callback(data: &[u8]) -> Vec<u8> {
 }
 
 #[no_mangle]
+#[inline(always)]
 pub extern "C" fn run(host: *mut c_char, port: u16) {
     if host.is_null() {
         eprintln!("null host pointer");
@@ -46,6 +49,7 @@ pub extern "C" fn run(host: *mut c_char, port: u16) {
 }
 
 #[no_mangle]
+#[inline(always)]
 pub extern "C" fn add_routes(route_data: *mut u8, num_routes: usize) {
     if route_data.is_null() {
         eprintln!("null route data pointer");
@@ -65,6 +69,7 @@ pub extern "C" fn add_routes(route_data: *mut u8, num_routes: usize) {
     }
 }
 
+#[inline(always)]
 fn method_type_from_string(method: &str) -> u8 {
     match method {
         "GET" => 0,
