@@ -7,24 +7,28 @@ use num_cpus;
 use std::collections::HashMap;
 use dashmap::DashMap;
 use std::sync::{Arc, RwLock};
+use std::hash::BuildHasherDefault;
+use ahash::AHasher;
 
 use crate::invoke_callback;
 use rmp_serde::{from_slice, to_vec};
 use serde::Deserialize;
 use serde_json::json;
 
+type AHashBuildHasher = BuildHasherDefault<AHasher>;
+
 static INSTANCE: Lazy<Arc<RwLock<Server>>> = Lazy::new(|| {
     Arc::new(RwLock::new(Server {
         host: "127.0.0.1".to_string(),
         port: 8080,
-        routes: DashMap::new(),
+        routes: DashMap::with_hasher(AHashBuildHasher::default()),
     }))
 });
 
 pub struct Server {
     pub host: String,
     pub port: u16,
-    pub routes: DashMap<String, u8>,
+    pub routes: DashMap<String, u8, AHashBuildHasher>,
 }
 
 impl Server {
@@ -38,12 +42,15 @@ impl Server {
     }
 
     pub fn add_route(path: String, method_type: u8) {
-        INSTANCE.write().unwrap().routes.insert(path, method_type);
+        let server = INSTANCE.read().unwrap();
+        server.routes.insert(path, method_type);
     }
 
     pub fn listen(server: Arc<RwLock<Server>>) {
         let server_guard = server.read().unwrap();
-        let addr = format!("{}:{}", server_guard.host, server_guard.port);
+        let host = server_guard.host.clone();
+        let port = server_guard.port;
+        let addr = format!("{}:{}", host, port);
 
         let routes_vec: Vec<(String, u8)> = server_guard
             .routes
@@ -51,9 +58,12 @@ impl Server {
             .map(|entry| (entry.key().clone(), *entry.value()))
             .collect();
 
+        drop(server_guard);
+
         rt::System::new().block_on(async move {
             HttpServer::new(move || {
                 let mut app = App::new();
+
                 for (path, method) in &routes_vec {
                     let path_clone = path.clone();
                     match method {
