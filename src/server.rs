@@ -5,48 +5,51 @@ use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer};
 use once_cell::sync::Lazy;
 use num_cpus;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use dashmap::DashMap;
+use std::sync::{Arc, RwLock};
 
 use crate::invoke_callback;
 use rmp_serde::{from_slice, to_vec};
 use serde::Deserialize;
 use serde_json::json;
 
-static INSTANCE: Lazy<Arc<Mutex<Server>>> = Lazy::new(|| Arc::new(Mutex::new(Server {
-    host: "127.0.0.1".to_string(),
-    port: 3000,
-    routes: Mutex::new(vec![]),
-})));
+static INSTANCE: Lazy<Arc<RwLock<Server>>> = Lazy::new(|| {
+    Arc::new(RwLock::new(Server {
+        host: "127.0.0.1".to_string(),
+        port: 8080,
+        routes: DashMap::new(),
+    }))
+});
 
 pub struct Server {
     pub host: String,
     pub port: u16,
-    pub routes: Mutex<Vec<(String, u8)>>,
+    pub routes: DashMap<String, u8>,
 }
 
 impl Server {
-    pub fn new(host: String, port: u16) -> Arc<Mutex<Server>> {
-        let mut server = INSTANCE.lock().unwrap();
+    pub fn new(host: String, port: u16) -> Arc<RwLock<Server>> {
+        let mut server = INSTANCE.write().unwrap();
         server.host = host;
         server.port = port;
         drop(server);
+
         INSTANCE.clone()
     }
 
     pub fn add_route(path: String, method_type: u8) {
-        let server = INSTANCE.lock().unwrap();
-        let mut routes = server.routes.lock().unwrap();
-        routes.push((path, method_type));
+        INSTANCE.write().unwrap().routes.insert(path, method_type);
     }
 
-    pub fn listen(server: Arc<Mutex<Server>>) {
-        let server_guard = server.lock().unwrap();
+    pub fn listen(server: Arc<RwLock<Server>>) {
+        let server_guard = server.read().unwrap();
         let addr = format!("{}:{}", server_guard.host, server_guard.port);
-        let routes_vec = {
-            let routes_lock = server_guard.routes.lock().unwrap();
-            routes_lock.clone()
-        };
-        drop(server_guard);
+
+        let routes_vec: Vec<(String, u8)> = server_guard
+            .routes
+            .iter()
+            .map(|entry| (entry.key().clone(), *entry.value()))
+            .collect();
 
         rt::System::new().block_on(async move {
             HttpServer::new(move || {
@@ -196,7 +199,6 @@ pub async fn handle_request(req: HttpRequest, path: String, method: &str) -> Htt
 
     for cookie in response_obj.cookies.iter() {
         let mut actix_cookie = ActixCookie::build(cookie.name.clone(), cookie.value.clone());
-
         for (opt_key, opt_value) in cookie.options.iter() {
             match opt_key.as_str() {
                 "path" => {
@@ -240,7 +242,6 @@ pub async fn handle_request(req: HttpRequest, path: String, method: &str) -> Htt
                 _ => {}
             }
         }
-
         builder.cookie(actix_cookie.finish());
     }
 
