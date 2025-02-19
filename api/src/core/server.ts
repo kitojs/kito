@@ -81,10 +81,14 @@ class Kito implements KitoInterface {
     }
     const routePtr = Deno.UnsafePointer.of(this.routesBuffer);
 
-    this.lib.symbols.add_routes(routePtr, this.routes.length);
-    this.lib.symbols.run(hostPtr, portConfig.port);
-
     callback?.();
+
+    this.lib.symbols.run(
+      hostPtr,
+      portConfig.port,
+      routePtr,
+      this.routes.length,
+    );
   }
 
   private handleRequest(

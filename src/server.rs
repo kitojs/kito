@@ -2,11 +2,9 @@ use actix_web::cookie::Cookie as ActixCookie;
 use actix_web::http::header;
 use actix_web::rt;
 use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer};
-use once_cell::sync::Lazy;
 use num_cpus;
 use std::collections::HashMap;
 use dashmap::DashMap;
-use std::sync::{Arc, RwLock};
 use std::hash::BuildHasherDefault;
 use ahash::AHasher;
 
@@ -17,48 +15,29 @@ use serde_json::json;
 
 type AHashBuildHasher = BuildHasherDefault<AHasher>;
 
-static INSTANCE: Lazy<Arc<RwLock<Server>>> = Lazy::new(|| {
-    Arc::new(RwLock::new(Server {
-        host: "127.0.0.1".to_string(),
-        port: 8080,
-        routes: DashMap::with_hasher(AHashBuildHasher::default()),
-    }))
-});
-
 pub struct Server {
-    pub host: String,
-    pub port: u16,
     pub routes: DashMap<String, u8, AHashBuildHasher>,
 }
 
 impl Server {
-    pub fn new(host: String, port: u16) -> Arc<RwLock<Server>> {
-        let mut server = INSTANCE.write().unwrap();
-        server.host = host;
-        server.port = port;
-        drop(server);
-
-        INSTANCE.clone()
+    pub fn new() -> Server {
+        Server {
+            routes: DashMap::with_hasher(AHashBuildHasher::default())
+        }
     }
 
-    pub fn add_route(path: String, method_type: u8) {
-        let server = INSTANCE.read().unwrap();
-        server.routes.insert(path, method_type);
+    pub fn add_route(&self, path: String, method_type: u8) {
+        self.routes.insert(path, method_type);
     }
 
-    pub fn listen(server: Arc<RwLock<Server>>) {
-        let server_guard = server.read().unwrap();
-        let host = server_guard.host.clone();
-        let port = server_guard.port;
+    pub fn listen(&self, host: String, port: u16) {
         let addr = format!("{}:{}", host, port);
 
-        let routes_vec: Vec<(String, u8)> = server_guard
+        let routes_vec: Vec<(String, u8)> = self
             .routes
             .iter()
             .map(|entry| (entry.key().clone(), *entry.value()))
             .collect();
-
-        drop(server_guard);
 
         rt::System::new().block_on(async move {
             HttpServer::new(move || {
