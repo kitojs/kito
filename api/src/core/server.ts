@@ -255,12 +255,34 @@ class Kito implements KitoInterface {
     return Deno.UnsafePointer.of(new Uint8Array(finalBuffer));
   }
 
+  private convertPath(path: string): string {
+    const segments = path.split('/');
+    const converted = segments.map((seg) =>
+      seg.startsWith(':') ? `{${seg.slice(1)}}` : seg,
+    );
+    const result = converted.join('/');
+
+    if (result === '') {
+      return '/';
+    } else if (result.startsWith('/')) {
+      return result;
+    } else {
+      return `/${result}`;
+    }
+  }
+
   private addRoute(
     path: string,
     method: string,
     ...handlers: MiddlewareHandler[]
   ): void {
-    this.routes.push({ path, method, callback: undefined });
+    let pathConverted = this.convertPath(path);
+
+    this.routes.push({
+      path: pathConverted,
+      method,
+      callback: undefined,
+    });
 
     const chain: MiddlewareHandler[] = [...this.globalMiddlewares, ...handlers];
     const composed = (req: Request, res: Response): ArrayBuffer | void => {
@@ -275,7 +297,7 @@ class Kito implements KitoInterface {
     };
 
     const code = routesId[method];
-    this.routeMap.set(`${code}:${path}`, composed);
+    this.routeMap.set(`${code}:${pathConverted}`, composed);
   }
 
   get(path: string, ...handlers: MiddlewareHandler[]): void {
