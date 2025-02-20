@@ -3,6 +3,8 @@ import type {
   KitoInterface,
   Request,
   Response,
+  Middleware,
+  MiddlewareHandler,
 } from '../types/server.d.ts';
 import { loadFunctions } from './ffi/loader.ts';
 import { encode, decode } from '@msgpack/msgpack';
@@ -15,10 +17,12 @@ const routesId: Record<string, number> = {
   DELETE: 4,
 };
 
+type Handler = (req: Request, res: Response) => ArrayBuffer | void;
+
 type RouteInfo = {
   path: string;
   method: string;
-  callback: (req: Request, res: Response) => ArrayBuffer | void;
+  callback: ((req: Request, res: Response) => ArrayBuffer | void) | undefined;
 };
 
 class Kito implements KitoInterface {
@@ -30,6 +34,7 @@ class Kito implements KitoInterface {
     (req: Request, res: Response) => ArrayBuffer | void
   > = new Map();
   private routesBuffer?: Uint8Array;
+  private globalMiddlewares: Middleware[] = [];
 
   constructor(config?: KitoConfig) {
     const DEFAULT_CONFIG: KitoConfig = {};
@@ -252,42 +257,43 @@ class Kito implements KitoInterface {
   private addRoute(
     path: string,
     method: string,
-    callback: (req: Request, res: Response) => ArrayBuffer | void,
-  ) {
-    this.routes.push({ path, method, callback });
+    ...handlers: MiddlewareHandler[]
+  ): void {
+    this.routes.push({ path, method, callback: undefined });
+
+    const chain: MiddlewareHandler[] = [...this.globalMiddlewares, ...handlers];
+    const composed = (req: Request, res: Response) => {
+      let i = 0;
+      const next = () => {
+        if (i < chain.length) {
+          const fn = chain[i++];
+          fn(req, res, next);
+        }
+      };
+      next();
+    };
+
     const code = routesId[method];
-    this.routeMap.set(`${code}:${path}`, callback);
+    this.routeMap.set(`${code}:${path}`, composed);
   }
 
-  get(
-    path: string,
-    callback: (req: Request, res: Response) => ArrayBuffer | void,
-  ): void {
-    this.addRoute(path, 'GET', callback);
+  get(path: string, ...handlers: MiddlewareHandler[]): void {
+    this.addRoute(path, 'GET', ...handlers);
   }
-  post(
-    path: string,
-    callback: (req: Request, res: Response) => ArrayBuffer | void,
-  ): void {
-    this.addRoute(path, 'POST', callback);
+  post(path: string, ...handlers: MiddlewareHandler[]): void {
+    this.addRoute(path, 'POST', ...handlers);
   }
-  put(
-    path: string,
-    callback: (req: Request, res: Response) => ArrayBuffer | void,
-  ): void {
-    this.addRoute(path, 'PUT', callback);
+  put(path: string, ...handlers: MiddlewareHandler[]): void {
+    this.addRoute(path, 'PUT', ...handlers);
   }
-  patch(
-    path: string,
-    callback: (req: Request, res: Response) => ArrayBuffer | void,
-  ): void {
-    this.addRoute(path, 'PATCH', callback);
+  patch(path: string, ...handlers: MiddlewareHandler[]): void {
+    this.addRoute(path, 'PATCH', ...handlers);
   }
-  delete(
-    path: string,
-    callback: (req: Request, res: Response) => ArrayBuffer | void,
-  ): void {
-    this.addRoute(path, 'DELETE', callback);
+  delete(path: string, ...handlers: MiddlewareHandler[]): void {
+    this.addRoute(path, 'DELETE', ...handlers);
+  }
+  use(middleware: Middleware): void {
+    this.globalMiddlewares.push(middleware);
   }
 }
 

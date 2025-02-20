@@ -8,26 +8,12 @@ interface KitoInterface {
     callback?: () => void,
   ): void;
 
-  get(
-    path: string,
-    callback: (req: Request, res: Response) => ArrayBuffer | void,
-  ): void;
-  post(
-    path: string,
-    callback: (req: Request, res: Response) => ArrayBuffer | void,
-  ): void;
-  put(
-    path: string,
-    callback: (req: Request, res: Response) => ArrayBuffer | void,
-  ): void;
-  patch(
-    path: string,
-    callback: (req: Request, res: Response) => ArrayBuffer | void,
-  ): void;
-  delete(
-    path: string,
-    callback: (req: Request, res: Response) => ArrayBuffer | void,
-  ): void;
+  get(path: string, ...handlers: MiddlewareHandler[]): void;
+  post(path: string, ...handlers: MiddlewareHandler[]): void;
+  put(path: string, ...handlers: MiddlewareHandler[]): void;
+  patch(path: string, ...handlers: MiddlewareHandler[]): void;
+  delete(path: string, ...handlers: MiddlewareHandler[]): void;
+  use(middleware: Middleware): void;
 }
 
 interface Request {
@@ -62,4 +48,21 @@ interface Response {
   end(): void;
 }
 
-export type { KitoConfig, KitoInterface, Request, Response };
+type Middleware = (
+  req: Request,
+  res: Response,
+  next: () => void,
+) => void | Promise<void>;
+
+type MiddlewareHandler =
+  | Middleware
+  | ((req: Request, res: Response) => ArrayBuffer | void);
+
+export type {
+  KitoConfig,
+  KitoInterface,
+  Request,
+  Response,
+  Middleware,
+  MiddlewareHandler,
+};
