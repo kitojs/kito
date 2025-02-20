@@ -209,6 +209,7 @@ class Kito implements KitoInterface {
           query: request.query,
           body: request.body,
           url: request.url,
+          params: request.params,
         },
         res,
       );
@@ -262,15 +263,15 @@ class Kito implements KitoInterface {
     this.routes.push({ path, method, callback: undefined });
 
     const chain: MiddlewareHandler[] = [...this.globalMiddlewares, ...handlers];
-    const composed = (req: Request, res: Response) => {
+    const composed = (req: Request, res: Response): ArrayBuffer | void => {
       let i = 0;
-      const next = () => {
+      const next = (): ArrayBuffer | void => {
         if (i < chain.length) {
           const fn = chain[i++];
-          fn(req, res, next);
+          return fn(req, res, next);
         }
       };
-      next();
+      return next();
     };
 
     const code = routesId[method];

@@ -15,6 +15,25 @@ use serde_json::json;
 
 type AHashBuildHasher = BuildHasherDefault<AHasher>;
 
+fn convert_path(path: &str) -> String {
+    let segments: Vec<&str> = path.split('/').collect();
+    let converted: Vec<String> = segments.iter().map(|seg| {
+        if seg.starts_with(':') {
+            format!("{{{}}}", &seg[1..])
+        } else {
+            seg.to_string()
+        }
+    }).collect();
+    let result = converted.join("/");
+    if result.is_empty() {
+        "/".to_string()
+    } else if result.starts_with("/") {
+        result
+    } else {
+        format!("/{}", result)
+    }
+}
+
 pub struct Server {
     pub routes: DashMap<String, u8, AHashBuildHasher>,
 }
@@ -45,10 +64,11 @@ impl Server {
 
                 for (path, method) in &routes_vec {
                     let path_clone = path.clone();
+                    let actix_path = convert_path(&path_clone);
                     match method {
                         0 => {
                             app = app.route(
-                                &path_clone,
+                                &actix_path,
                                 web::get().to({
                                     let path_inner = path_clone.clone();
                                     move |req: HttpRequest| {
@@ -59,7 +79,7 @@ impl Server {
                         }
                         1 => {
                             app = app.route(
-                                &path_clone,
+                                &actix_path,
                                 web::post().to({
                                     let path_inner = path_clone.clone();
                                     move |req: HttpRequest| {
@@ -70,7 +90,7 @@ impl Server {
                         }
                         2 => {
                             app = app.route(
-                                &path_clone,
+                                &actix_path,
                                 web::put().to({
                                     let path_inner = path_clone.clone();
                                     move |req: HttpRequest| {
@@ -81,7 +101,7 @@ impl Server {
                         }
                         3 => {
                             app = app.route(
-                                &path_clone,
+                                &actix_path,
                                 web::patch().to({
                                     let path_inner = path_clone.clone();
                                     move |req: HttpRequest| {
@@ -92,7 +112,7 @@ impl Server {
                         }
                         4 => {
                             app = app.route(
-                                &path_clone,
+                                &actix_path,
                                 web::delete().to({
                                     let path_inner = path_clone.clone();
                                     move |req: HttpRequest| {
@@ -141,6 +161,11 @@ struct Cookie {
 }
 
 pub async fn handle_request(req: HttpRequest, path: String, method: &str) -> HttpResponse {
+    let params: HashMap<String, String> = req.match_info()
+        .iter()
+        .map(|(k, v)| (k.to_string(), v.to_string()))
+        .collect();
+
     let request_obj = json!({
         "method": method,
         "path": path,
@@ -151,6 +176,7 @@ pub async fn handle_request(req: HttpRequest, path: String, method: &str) -> Htt
             .collect::<HashMap<_, _>>(),
         "query": req.query_string(),
         "url": req.uri().to_string(),
+        "params": params,
     });
 
     let request_bytes = to_vec(&request_obj).unwrap();
