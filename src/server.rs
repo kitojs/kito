@@ -4,6 +4,7 @@ use actix_web::rt;
 use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer};
 use num_cpus;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use crate::invoke_callback;
 use rmp_serde::{from_slice, to_vec};
@@ -11,7 +12,7 @@ use serde::Deserialize;
 use serde_json::json;
 
 pub struct Server {
-    pub routes: Vec<(String, u8)>,
+    pub routes: Vec<(Arc<str>, u8)>,
 }
 
 impl Server {
@@ -22,7 +23,8 @@ impl Server {
     }
 
     pub fn add_route(&mut self, path: String, method_type: u8) {
-        self.routes.push((path, method_type));
+        let arc_path: Arc<str> = Arc::from(path);
+        self.routes.push((arc_path, method_type));
     }
 
     pub fn listen(self, host: String, port: u16) {
@@ -33,62 +35,62 @@ impl Server {
             HttpServer::new(move || {
                 let mut app = App::new();
                 for (route_path, method) in &routes_vec {
-                    let path_clone = route_path.clone();
+                    let path_clone = Arc::clone(route_path);
                     match method {
                         0 => {
                             app = app.route(
-                                &path_clone,
+                                &*path_clone,
                                 web::get().to({
-                                    let path_inner = path_clone.clone();
+                                    let path_inner = Arc::clone(&path_clone);
                                     move |req: HttpRequest| {
-                                        handle_request(req, path_inner.clone(), "GET")
+                                        handle_request(req, Arc::clone(&path_inner), "GET")
                                     }
                                 }),
-                            )
+                            );
                         }
                         1 => {
                             app = app.route(
-                                &path_clone,
+                                &*path_clone,
                                 web::post().to({
-                                    let path_inner = path_clone.clone();
+                                    let path_inner = Arc::clone(&path_clone);
                                     move |req: HttpRequest| {
-                                        handle_request(req, path_inner.clone(), "POST")
+                                        handle_request(req, Arc::clone(&path_inner), "POST")
                                     }
                                 }),
-                            )
+                            );
                         }
                         2 => {
                             app = app.route(
-                                &path_clone,
+                                &*path_clone,
                                 web::put().to({
-                                    let path_inner = path_clone.clone();
+                                    let path_inner = Arc::clone(&path_clone);
                                     move |req: HttpRequest| {
-                                        handle_request(req, path_inner.clone(), "PUT")
+                                        handle_request(req, Arc::clone(&path_inner), "PUT")
                                     }
                                 }),
-                            )
+                            );
                         }
                         3 => {
                             app = app.route(
-                                &path_clone,
+                                &*path_clone,
                                 web::patch().to({
-                                    let path_inner = path_clone.clone();
+                                    let path_inner = Arc::clone(&path_clone);
                                     move |req: HttpRequest| {
-                                        handle_request(req, path_inner.clone(), "PATCH")
+                                        handle_request(req, Arc::clone(&path_inner), "PATCH")
                                     }
                                 }),
-                            )
+                            );
                         }
                         4 => {
                             app = app.route(
-                                &path_clone,
+                                &*path_clone,
                                 web::delete().to({
-                                    let path_inner = path_clone.clone();
+                                    let path_inner = Arc::clone(&path_clone);
                                     move |req: HttpRequest| {
-                                        handle_request(req, path_inner.clone(), "DELETE")
+                                        handle_request(req, Arc::clone(&path_inner), "DELETE")
                                     }
                                 }),
-                            )
+                            );
                         }
                         _ => {}
                     }
@@ -129,7 +131,7 @@ struct Cookie {
     options: HashMap<String, String>,
 }
 
-pub async fn handle_request(req: HttpRequest, path: String, method: &str) -> HttpResponse {
+pub async fn handle_request(req: HttpRequest, path: Arc<str>, method: &str) -> HttpResponse {
     let params: HashMap<String, String> = req.match_info()
         .iter()
         .map(|(k, v)| (k.to_string(), v.to_string()))
@@ -137,7 +139,7 @@ pub async fn handle_request(req: HttpRequest, path: String, method: &str) -> Htt
 
     let request_obj = json!({
         "method": method,
-        "path": path,
+        "path": &*path,
         "headers": req
             .headers()
             .iter()
