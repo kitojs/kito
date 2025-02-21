@@ -8,6 +8,7 @@
     "chalk": "^5.4.1",
     "chart.js": "^4.4.7",
     "commander": "^13.1.0",
+    "elysia": "^1.2.15",
     "express": "^4.21.2",
     "fastify": "^5.2.1",
     "hono": "^4.7.1",

@@ -3,6 +3,12 @@ const results = [];
 const servers = [
   { name: 'kito', runner: 'deno', args: ['run', '-A'], extension: 'ts' },
   {
+    name: 'elysia',
+    runner: 'bun',
+    args: [],
+    extension: 'ts',
+  },
+  {
     name: 'fastify',
     runner: 'node',
     args: ['--no-warnings', '--experimental-strip-types'],
