@@ -106,7 +106,7 @@ impl Server {
                 }
                 app
             })
-            .workers(num_cpus::get())
+            .workers(num_cpus::get() * 2)
             .bind(&addr)
             .expect("failed to bind address")
             .run()
