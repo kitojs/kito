@@ -4,47 +4,36 @@ use actix_web::rt;
 use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer};
 use num_cpus;
 use std::collections::HashMap;
-use dashmap::DashMap;
-use std::hash::BuildHasherDefault;
-use ahash::AHasher;
 
 use crate::invoke_callback;
 use rmp_serde::{from_slice, to_vec};
 use serde::Deserialize;
 use serde_json::json;
 
-type AHashBuildHasher = BuildHasherDefault<AHasher>;
-
 pub struct Server {
-    pub routes: DashMap<String, u8, AHashBuildHasher>,
+    pub routes: Vec<(String, u8)>,
 }
 
 impl Server {
     pub fn new() -> Server {
         Server {
-            routes: DashMap::with_hasher(AHashBuildHasher::default())
+            routes: Vec::new(),
         }
     }
 
-    pub fn add_route(&self, path: String, method_type: u8) {
-        self.routes.insert(path, method_type);
+    pub fn add_route(&mut self, path: String, method_type: u8) {
+        self.routes.push((path, method_type));
     }
 
-    pub fn listen(&self, host: String, port: u16) {
+    pub fn listen(self, host: String, port: u16) {
         let addr = format!("{}:{}", host, port);
-
-        let routes_vec: Vec<(String, u8)> = self
-            .routes
-            .iter()
-            .map(|entry| (entry.key().clone(), *entry.value()))
-            .collect();
+        let routes_vec = self.routes;
 
         rt::System::new().block_on(async move {
             HttpServer::new(move || {
                 let mut app = App::new();
-
-                for (path, method) in &routes_vec {
-                    let path_clone = path.clone();
+                for (route_path, method) in &routes_vec {
+                    let path_clone = route_path.clone();
                     match method {
                         0 => {
                             app = app.route(

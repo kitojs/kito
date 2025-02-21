@@ -32,7 +32,7 @@ pub fn invoke_callback(data: &[u8]) -> Vec<u8> {
 #[no_mangle]
 #[inline(always)]
 pub extern "C" fn run(host: *mut c_char, port: u16, route_data: *mut u8, num_routes: usize) {
-    let server = Server::new();
+    let mut server = Server::new();
 
     if host.is_null() {
         eprintln!("null host pointer");
