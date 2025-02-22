@@ -58,8 +58,8 @@ class Kito implements KitoInterface {
   ): void {
     const portConfig =
       typeof options === 'number'
-        ? { port: options, hostname: 'localhost' }
-        : { ...options, hostname: options.hostname || 'localhost' };
+        ? { port: options, hostname: '127.0.0.1' }
+        : { ...options, hostname: options.hostname || '127.0.0.1' };
 
     const encoder = new TextEncoder();
     const hostStr = `${portConfig.hostname}\0`;
