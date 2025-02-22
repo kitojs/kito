@@ -15,7 +15,7 @@
     "bench": "node bench/start.js"
   },
   "dependencies": {
-    "@msgpack/msgpack": "^3.0.0-beta3"
+    "msgpackr": "^1.11.2"
   },
   "devDependencies": {
     "prettier": "3.4.2"

@@ -7,7 +7,7 @@ import type {
   MiddlewareHandler,
 } from '../types/server.d.ts';
 import { loadFunctions } from './ffi/loader.ts';
-import { encode, decode } from '@msgpack/msgpack';
+import { pack as encode, unpack as decode } from 'msgpackr';
 
 const routesId: Record<string, number> = {
   GET: 0,
