@@ -7,6 +7,7 @@ import type {
   MiddlewareHandler,
 } from '../types/server.d.ts';
 import { loadFunctions } from './ffi/loader.ts';
+import { route, type InferType, RouteBuilder, SchemaType } from './schema.ts';
 import { pack as encode, unpack as decode } from 'msgpackr';
 
 const routesId: Record<string, number> = {
@@ -300,20 +301,297 @@ class Server implements ServerInterface {
     this.routeMap.set(`${code}:${pathConverted}`, composed);
   }
 
-  get(path: string, ...handlers: MiddlewareHandler[]): void {
-    this.addRoute(path, 'GET', ...handlers);
+  // this is temporary, i'll have to move it to actix
+  private validateSchema(
+    data: any,
+    schema: SchemaType | Record<string, SchemaType>,
+  ): { valid: boolean; errors?: string[] } {
+    const errors: string[] = [];
+
+    if ('type' in schema) {
+      switch (schema.type) {
+        case 'string':
+          if (typeof data !== 'string') {
+            errors.push(`expected string, got ${typeof data}`);
+          }
+          break;
+        case 'number':
+          if (typeof data !== 'number') {
+            errors.push(`expected number, got ${typeof data}`);
+          }
+          break;
+        case 'boolean':
+          if (typeof data !== 'boolean') {
+            errors.push(`expected boolean, got ${typeof data}`);
+          }
+          break;
+        case 'object':
+          if (typeof data !== 'object' || data === null) {
+            errors.push(`expected object, got ${typeof data}`);
+          } else {
+            for (const [key, propSchema] of Object.entries(schema.properties)) {
+              const propResult = this.validateSchema(data[key], propSchema);
+              if (!propResult.valid) {
+                errors.push(...(propResult.errors || []));
+              }
+            }
+          }
+          break;
+        case 'array':
+          if (!Array.isArray(data)) {
+            errors.push(`expected array, got ${typeof data}`);
+          } else {
+            for (const item of data) {
+              const itemResult = this.validateSchema(item, schema.items);
+              if (!itemResult.valid) {
+                errors.push(...(itemResult.errors || []));
+              }
+            }
+          }
+          break;
+      }
+    } else {
+      for (const [key, propSchema] of Object.entries(schema)) {
+        const propResult = this.validateSchema(data[key], propSchema);
+        if (!propResult.valid) {
+          errors.push(...(propResult.errors || []));
+        }
+      }
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors: errors.length > 0 ? errors : undefined,
+    };
   }
-  post(path: string, ...handlers: MiddlewareHandler[]): void {
-    this.addRoute(path, 'POST', ...handlers);
+
+  get<TParams extends Record<string, SchemaType>, TResponse extends SchemaType>(
+    pathOrRoute: RouteBuilder<TParams, TResponse>,
+    handler: (
+      req: Request<
+        TParams extends undefined
+          ? any
+          : { [K in keyof TParams]: InferType<TParams[K]> }
+      >,
+      res: Response<TResponse extends undefined ? any : InferType<TResponse>>,
+    ) => void,
+  ): void;
+  get(path: string, handler: (req: Request, res: Response) => void): void;
+  get(
+    pathOrRoute: string | RouteBuilder<any, any>,
+    handler: (req: Request<any>, res: Response<any>) => void,
+  ): void {
+    if (typeof pathOrRoute === 'string') {
+      this.addRoute(pathOrRoute, 'GET', handler);
+    } else {
+      const path = pathOrRoute.getPath();
+      const schemas = pathOrRoute.getSchemas();
+
+      const validationMiddleware = (
+        req: Request,
+        res: Response,
+        next: () => void,
+      ) => {
+        if (schemas.params) {
+          const validationResult = this.validateSchema(
+            req.params,
+            schemas.params,
+          );
+          if (!validationResult.valid) {
+            res.status(400).json({ error: validationResult.errors });
+            return;
+          }
+        }
+        next();
+      };
+
+      this.addRoute(path, 'GET', validationMiddleware, handler);
+    }
   }
-  put(path: string, ...handlers: MiddlewareHandler[]): void {
-    this.addRoute(path, 'PUT', ...handlers);
+
+  post<
+    TParams extends Record<string, SchemaType>,
+    TResponse extends SchemaType,
+  >(
+    pathOrRoute: RouteBuilder<TParams, TResponse>,
+    handler: (
+      req: Request<
+        TParams extends undefined
+          ? any
+          : { [K in keyof TParams]: InferType<TParams[K]> }
+      >,
+      res: Response<TResponse extends undefined ? any : InferType<TResponse>>,
+    ) => void,
+  ): void;
+  post(path: string, handler: (req: Request, res: Response) => void): void;
+  post(
+    pathOrRoute: string | RouteBuilder<any, any>,
+    handler: (req: Request<any>, res: Response<any>) => void,
+  ): void {
+    if (typeof pathOrRoute === 'string') {
+      this.addRoute(pathOrRoute, 'POST', handler);
+    } else {
+      const path = pathOrRoute.getPath();
+      const schemas = pathOrRoute.getSchemas();
+
+      const validationMiddleware = (
+        req: Request,
+        res: Response,
+        next: () => void,
+      ) => {
+        if (schemas.params) {
+          const validationResult = this.validateSchema(
+            req.params,
+            schemas.params,
+          );
+          if (!validationResult.valid) {
+            res.status(400).json({ error: validationResult.errors });
+            return;
+          }
+        }
+        next();
+      };
+
+      this.addRoute(path, 'POST', validationMiddleware, handler);
+    }
   }
-  patch(path: string, ...handlers: MiddlewareHandler[]): void {
-    this.addRoute(path, 'PATCH', ...handlers);
+
+  put<TParams extends Record<string, SchemaType>, TResponse extends SchemaType>(
+    pathOrRoute: RouteBuilder<TParams, TResponse>,
+    handler: (
+      req: Request<
+        TParams extends undefined
+          ? any
+          : { [K in keyof TParams]: InferType<TParams[K]> }
+      >,
+      res: Response<TResponse extends undefined ? any : InferType<TResponse>>,
+    ) => void,
+  ): void;
+  put(path: string, handler: (req: Request, res: Response) => void): void;
+  put(
+    pathOrRoute: string | RouteBuilder<any, any>,
+    handler: (req: Request<any>, res: Response<any>) => void,
+  ): void {
+    if (typeof pathOrRoute === 'string') {
+      this.addRoute(pathOrRoute, 'PUT', handler);
+    } else {
+      const path = pathOrRoute.getPath();
+      const schemas = pathOrRoute.getSchemas();
+
+      const validationMiddleware = (
+        req: Request,
+        res: Response,
+        next: () => void,
+      ) => {
+        if (schemas.params) {
+          const validationResult = this.validateSchema(
+            req.params,
+            schemas.params,
+          );
+          if (!validationResult.valid) {
+            res.status(400).json({ error: validationResult.errors });
+            return;
+          }
+        }
+        next();
+      };
+
+      this.addRoute(path, 'PUT', validationMiddleware, handler);
+    }
   }
-  delete(path: string, ...handlers: MiddlewareHandler[]): void {
-    this.addRoute(path, 'DELETE', ...handlers);
+
+  patch<
+    TParams extends Record<string, SchemaType>,
+    TResponse extends SchemaType,
+  >(
+    pathOrRoute: RouteBuilder<TParams, TResponse>,
+    handler: (
+      req: Request<
+        TParams extends undefined
+          ? any
+          : { [K in keyof TParams]: InferType<TParams[K]> }
+      >,
+      res: Response<TResponse extends undefined ? any : InferType<TResponse>>,
+    ) => void,
+  ): void;
+  patch(path: string, handler: (req: Request, res: Response) => void): void;
+  patch(
+    pathOrRoute: string | RouteBuilder<any, any>,
+    handler: (req: Request<any>, res: Response<any>) => void,
+  ): void {
+    if (typeof pathOrRoute === 'string') {
+      this.addRoute(pathOrRoute, 'PATCH', handler);
+    } else {
+      const path = pathOrRoute.getPath();
+      const schemas = pathOrRoute.getSchemas();
+
+      const validationMiddleware = (
+        req: Request,
+        res: Response,
+        next: () => void,
+      ) => {
+        if (schemas.params) {
+          const validationResult = this.validateSchema(
+            req.params,
+            schemas.params,
+          );
+          if (!validationResult.valid) {
+            res.status(400).json({ error: validationResult.errors });
+            return;
+          }
+        }
+        next();
+      };
+
+      this.addRoute(path, 'PATCH', validationMiddleware, handler);
+    }
+  }
+
+  delete<
+    TParams extends Record<string, SchemaType>,
+    TResponse extends SchemaType,
+  >(
+    pathOrRoute: RouteBuilder<TParams, TResponse>,
+    handler: (
+      req: Request<
+        TParams extends undefined
+          ? any
+          : { [K in keyof TParams]: InferType<TParams[K]> }
+      >,
+      res: Response<TResponse extends undefined ? any : InferType<TResponse>>,
+    ) => void,
+  ): void;
+  delete(path: string, handler: (req: Request, res: Response) => void): void;
+  delete(
+    pathOrRoute: string | RouteBuilder<any, any>,
+    handler: (req: Request<any>, res: Response<any>) => void,
+  ): void {
+    if (typeof pathOrRoute === 'string') {
+      this.addRoute(pathOrRoute, 'DELETE', handler);
+    } else {
+      const path = pathOrRoute.getPath();
+      const schemas = pathOrRoute.getSchemas();
+
+      const validationMiddleware = (
+        req: Request,
+        res: Response,
+        next: () => void,
+      ) => {
+        if (schemas.params) {
+          const validationResult = this.validateSchema(
+            req.params,
+            schemas.params,
+          );
+          if (!validationResult.valid) {
+            res.status(400).json({ error: validationResult.errors });
+            return;
+          }
+        }
+        next();
+      };
+
+      this.addRoute(path, 'DELETE', validationMiddleware, handler);
+    }
   }
   use(middleware: Middleware): void {
     this.globalMiddlewares.push(middleware);
@@ -324,4 +602,4 @@ function server(options?: ServerConfig): Server {
   return new Server(options);
 }
 
-export { server };
+export { server, route };

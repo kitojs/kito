@@ -16,8 +16,8 @@ interface ServerInterface {
   use(middleware: Middleware): void;
 }
 
-interface Request {
-  params: Record<string, string>;
+interface Request<TParams = any> {
+  params: TParams;
   query: Record<string, string | string[]>;
   body: any;
   headers: Record<string, string>;
@@ -35,16 +35,16 @@ interface CookieOptions {
   sameSite?: boolean | 'lax' | 'strict' | 'none';
 }
 
-interface Response {
-  send(body: string | object): Response;
-  json(body: object): Response;
-  status(code: number): Response;
-  header(key: string, value: string): Response;
-  cookie(name: string, value: string, options?: CookieOptions): Response;
-  redirect(url: string): Response;
-  type(mime: string): Response;
-  append(key: string, value: string): Response;
-  sendStatus(code: number): Response;
+interface Response<TBody = any> {
+  send(body: TBody): Response<TBody>;
+  json(body: TBody): Response<TBody>;
+  status(code: number): Response<TBody>;
+  header(key: string, value: string): Response<TBody>;
+  cookie(name: string, value: string, options?: CookieOptions): Response<TBody>;
+  redirect(url: string): Response<TBody>;
+  type(mime: string): Response<TBody>;
+  append(key: string, value: string): Response<TBody>;
+  sendStatus(code: number): Response<TBody>;
   end(): void;
 }
 
