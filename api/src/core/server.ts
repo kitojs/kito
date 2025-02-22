@@ -17,8 +17,6 @@ const routesId: Record<string, number> = {
   DELETE: 4,
 };
 
-type Handler = (req: Request, res: Response) => ArrayBuffer | void;
-
 type RouteInfo = {
   path: string;
   method: string;
@@ -31,7 +29,7 @@ class Kito implements KitoInterface {
   private routes: RouteInfo[] = [];
   private routeMap: Map<
     string,
-    (req: Request, res: Response) => ArrayBuffer | void
+    (req: Request, res: Response) => ArrayBuffer | void | Promise<void>
   > = new Map();
   private routesBuffer?: Uint8Array;
   private globalMiddlewares: Middleware[] = [];
@@ -204,7 +202,6 @@ class Kito implements KitoInterface {
       const result = routeCallback(
         {
           method,
-          path,
           headers: request.headers,
           query: request.query,
           body: request.body,
@@ -285,9 +282,12 @@ class Kito implements KitoInterface {
     });
 
     const chain: MiddlewareHandler[] = [...this.globalMiddlewares, ...handlers];
-    const composed = (req: Request, res: Response): ArrayBuffer | void => {
+    const composed = (
+      req: Request,
+      res: Response,
+    ): ArrayBuffer | void | Promise<void> => {
       let i = 0;
-      const next = (): ArrayBuffer | void => {
+      const next = (): ArrayBuffer | void | Promise<void> => {
         if (i < chain.length) {
           const fn = chain[i++];
           return fn(req, res, next);
