@@ -1,7 +1,7 @@
-type KitoConfig = {};
+type ServerConfig = {};
 
-interface KitoInterface {
-  readonly config: KitoConfig;
+interface ServerInterface {
+  readonly config: ServerConfig;
 
   listen(
     options: { port: number; hostname?: string } | number,
@@ -59,8 +59,8 @@ type MiddlewareHandler =
   | ((req: Request, res: Response) => ArrayBuffer | void);
 
 export type {
-  KitoConfig,
-  KitoInterface,
+  ServerConfig,
+  ServerInterface,
   Request,
   Response,
   Middleware,

@@ -1,6 +1,6 @@
 import type {
-  KitoConfig,
-  KitoInterface,
+  ServerConfig,
+  ServerInterface,
   Request,
   Response,
   Middleware,
@@ -23,8 +23,8 @@ type RouteInfo = {
   callback: ((req: Request, res: Response) => ArrayBuffer | void) | undefined;
 };
 
-class Kito implements KitoInterface {
-  readonly config: KitoConfig;
+class Server implements ServerInterface {
+  readonly config: ServerConfig;
   private lib: Deno.DynamicLibrary<Deno.ForeignLibraryInterface>;
   private routes: RouteInfo[] = [];
   private routeMap: Map<
@@ -34,8 +34,8 @@ class Kito implements KitoInterface {
   private routesBuffer?: Uint8Array;
   private globalMiddlewares: Middleware[] = [];
 
-  constructor(config?: KitoConfig) {
-    const DEFAULT_CONFIG: KitoConfig = {};
+  constructor(config?: ServerConfig) {
+    const DEFAULT_CONFIG: ServerConfig = {};
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.lib = loadFunctions()!;
 
@@ -320,8 +320,8 @@ class Kito implements KitoInterface {
   }
 }
 
-function kito(options?: KitoConfig): Kito {
-  return new Kito(options);
+function server(options?: ServerConfig): Server {
+  return new Server(options);
 }
 
-export { kito };
+export { server };
