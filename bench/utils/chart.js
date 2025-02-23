@@ -10,7 +10,7 @@ export const generateChart = (outputPath) => {
   const canvas = createCanvas(width, height);
   const ctx = canvas.getContext('2d');
 
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = '#f8f9fa';
   ctx.fillRect(0, 0, width, height);
 
   const chartConfig = {
@@ -21,25 +21,78 @@ export const generateChart = (outputPath) => {
         {
           label: 'Req/s',
           data: results.map((result) => result.reqPerSec),
-          backgroundColor: 'rgba(75, 192, 192, 1)',
-          borderColor: 'rgba(75, 192, 192, 1)',
-          borderWidth: 1,
+          backgroundColor: 'rgba(54, 162, 235, 0.8)',
+          borderColor: 'rgba(54, 162, 235, 1)',
+          borderWidth: 2,
+          borderRadius: 5,
           yAxisID: 'reqs',
         },
         {
           label: 'Latency (ms)',
           data: results.map((result) => result.latency),
-          backgroundColor: 'rgba(255, 99, 132, 1)',
+          backgroundColor: 'rgba(255, 99, 132, 0.8)',
           borderColor: 'rgba(255, 99, 132, 1)',
-          borderWidth: 1,
+          borderWidth: 2,
+          borderRadius: 5,
           yAxisID: 'latency',
         },
       ],
     },
+    options: {
+      responsive: false,
+      plugins: {
+        legend: {
+          labels: {
+            color: '#333',
+            font: {
+              size: 14,
+              weight: 'bold',
+            },
+          },
+        },
+      },
+      scales: {
+        reqs: {
+          position: 'left',
+          ticks: {
+            color: '#555',
+            font: {
+              size: 12,
+            },
+          },
+          grid: {
+            color: 'rgba(200, 200, 200, 0.2)',
+          },
+        },
+        latency: {
+          position: 'right',
+          ticks: {
+            color: '#555',
+            font: {
+              size: 12,
+            },
+          },
+          grid: {
+            color: 'rgba(200, 200, 200, 0.2)',
+          },
+        },
+        x: {
+          ticks: {
+            color: '#333',
+            font: {
+              size: 12,
+            },
+          },
+          grid: {
+            color: 'rgba(200, 200, 200, 0.2)',
+          },
+        },
+      },
+    },
   };
 
   new Chart(ctx, chartConfig);
-  const buffer = canvas.toBuffer('image/jpeg');
+  const buffer = canvas.toBuffer('image/png');
   fs.writeFileSync(outputPath, buffer);
   console.log(chalk.green(`\nChart saved to ${outputPath}`));
 };
