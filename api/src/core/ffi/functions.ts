@@ -1,6 +1,6 @@
 export const FFI_FUNCTIONS_LIST: Deno.ForeignLibraryInterface = {
   run: {
-    parameters: ['pointer', 'u16', 'pointer', 'usize'],
+    parameters: ['pointer', 'usize'],
     result: 'void',
     nonblocking: true,
   },

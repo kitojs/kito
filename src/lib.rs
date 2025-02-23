@@ -1,7 +1,7 @@
 mod server;
 
+use serde::Deserialize;
 use server::Server;
-use std::ffi::{c_char, CStr};
 
 static mut CALLBACK_PTR: Option<extern "C" fn(*const u8, usize) -> *const u8> = None;
 
@@ -29,45 +29,38 @@ pub fn invoke_callback(data: &[u8]) -> Vec<u8> {
     b"{}".to_vec()
 }
 
+#[derive(Debug, Deserialize)]
+struct Route {
+    path: String,
+    method: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct Config {
+    host: String,
+    port: u16,
+    routes: Vec<Route>,
+}
+
 #[no_mangle]
-#[inline(always)]
-pub extern "C" fn run(host: *mut c_char, port: u16, route_data: *mut u8, num_routes: usize) {
-    let mut server = Server::new();
+pub extern "C" fn run(config_ptr: *const u8, len: usize) {
+    let config_slice = unsafe { std::slice::from_raw_parts(config_ptr, len) };
 
-    if host.is_null() {
-        eprintln!("null host pointer");
-        return;
-    }
-
-    let host_str = unsafe {
-        match CStr::from_ptr(host).to_str() {
-            Ok(s) => s.to_string(),
-            Err(e) => {
-                eprintln!("invalid UTF-8: {}", e);
-                "127.0.0.1".to_string()
-            }
+    let config: Config = match rmp_serde::from_slice(config_slice) {
+        Ok(cfg) => cfg,
+        Err(e) => {
+            eprintln!("error decoding config: {:?}", e);
+            return;
         }
     };
 
-    if route_data.is_null() {
-        eprintln!("null route data pointer");
-        return;
+    let mut server = Server::new();
+    for route in config.routes {
+        println!("route: {} {}", route.method, route.path);
+        server.add_route(route.path, method_type_from_string(&route.method));
     }
 
-    let slice = unsafe { std::slice::from_raw_parts(route_data, num_routes * 100) };
-    let mut offset = 0;
-    for _ in 0..num_routes {
-        let path_len = slice[offset..].iter().position(|&b| b == 0).unwrap();
-        let path = String::from_utf8_lossy(&slice[offset..offset + path_len]).to_string();
-        offset += path_len + 1;
-        let method_len = slice[offset..].iter().position(|&b| b == 0).unwrap();
-        let method = String::from_utf8_lossy(&slice[offset..offset + method_len]).to_string();
-        offset += method_len + 1;
-        println!("route: {} {}", method, path);
-        server.add_route(path, method_type_from_string(&method));
-    }
-
-    server.listen(host_str, port);
+    server.listen(config.host, config.port);
 }
 
 #[inline(always)]

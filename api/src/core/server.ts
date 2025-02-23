@@ -60,41 +60,24 @@ class Server implements ServerInterface {
         ? { port: options, hostname: '127.0.0.1' }
         : { ...options, hostname: options.hostname || '127.0.0.1' };
 
-    const encoder = new TextEncoder();
-    const hostStr = `${portConfig.hostname}\0`;
-    const hostPtr = Deno.UnsafePointer.of(encoder.encode(hostStr));
+    const routesArray = this.routes.map((route) => ({
+      path: route.path,
+      method: route.method,
+    }));
 
-    if (!this.routesBuffer) {
-      let totalSize = 0;
-      for (const route of this.routes) {
-        totalSize += route.path.length + route.method.length + 2;
-      }
+    const configObject = {
+      host: portConfig.hostname,
+      port: portConfig.port,
+      routes: routesArray,
+    };
 
-      this.routesBuffer = new Uint8Array(totalSize);
-      let offset = 0;
-      for (const route of this.routes) {
-        const pathBytes = encoder.encode(route.path);
-        this.routesBuffer.set(pathBytes, offset);
-        offset += pathBytes.length;
-        this.routesBuffer[offset++] = 0;
-        const methodBytes = encoder.encode(route.method);
-        this.routesBuffer.set(methodBytes, offset);
-        offset += methodBytes.length;
-        this.routesBuffer[offset++] = 0;
-      }
-    }
-    const routePtr = Deno.UnsafePointer.of(this.routesBuffer);
+    const encodedConfig = encode(configObject);
 
     callback?.();
 
-    this.lib.symbols.run(
-      hostPtr,
-      portConfig.port,
-      routePtr,
-      this.routes.length,
-    );
+    const configPtr = Deno.UnsafePointer.of(encodedConfig);
+    this.lib.symbols.run(configPtr, encodedConfig.byteLength);
   }
-
   private handleRequest(
     ptr: Deno.PointerValue,
     len: number,
