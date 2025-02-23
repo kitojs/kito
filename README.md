@@ -34,7 +34,7 @@ app.listen(3000);
 
 Kito is **the fastest backend framework** in the JavaScript ecosystem. By leveraging the performance of **Rust**, Kito outperforms traditional frameworks like Express by an incredible margin. To put it in perspective: **Kito is +1400% (x15) faster than Express**.
 
-<img src="./bench/charts/results.jpeg" alt="Benchmark chart results" width="10000px" />
+<img src="./bench/charts/results.png" alt="Benchmark chart results" width="10000px" />
 
 > **Req/s**: Higher is better.  
 > **Latency**: Lower is better.
