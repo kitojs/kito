@@ -1,13 +1,13 @@
 import { spawn } from 'node:child_process';
 import chalk from 'chalk';
 
-export const startServer = (name, runner, args, extension) => {
+export const startServer = (name, runner, args, extension, example) => {
   return new Promise((resolve, reject) => {
     console.log(chalk.cyan(`\nStarting server ${name}...`));
 
     const server = spawn(
       runner,
-      [...args, `./bench/servers/${name}.${extension}`],
+      [...args, `./bench/servers/${example}/${name}.${extension}`],
       {
         stdio: 'inherit',
       },

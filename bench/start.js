@@ -13,6 +13,7 @@ const run = async ({
   pipelining,
   genChartImage,
   chartImagePath,
+  example,
 }) => {
   if (genChartImage) {
     console.log(
@@ -23,7 +24,7 @@ const run = async ({
   }
 
   for (const { name, runner, args, extension } of servers) {
-    const srv = await startServer(name, runner, args, extension);
+    const srv = await startServer(name, runner, args, extension, example);
     await runBenchmark({
       name,
       url,
@@ -81,7 +82,11 @@ const init = () => {
     .option('-m, --method <method>', 'HTTP Method')
     .option('--pipelining <pipelining>', 'Number of pipelining requests')
     .option('--ch, --chart', 'Enable chart image generation')
-    .option('--cip, --chart-image-path <path>', 'Path to save the chart image');
+    .option('--cip, --chart-image-path <path>', 'Path to save the chart image')
+    .option(
+      '-e, --example <example>',
+      'The example to be run in the benchmarks',
+    );
 
   program.parse(process.argv);
   const options = program.opts();
@@ -98,6 +103,7 @@ const init = () => {
   const genChartImage = options.chart;
   const chartImagePath =
     options.chartImagePath || './bench/charts/results.jpeg';
+  const example = options.example ? options.example : 'basic';
 
   run({
     url,
@@ -107,6 +113,7 @@ const init = () => {
     pipelining,
     genChartImage,
     chartImagePath,
+    example,
   }).catch((err) => console.error(chalk.red(err)));
 };
 
