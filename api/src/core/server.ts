@@ -32,7 +32,6 @@ class Server implements ServerInterface {
     string,
     (req: Request, res: Response) => ArrayBuffer | void | Promise<void>
   > = new Map();
-  private routesBuffer?: Uint8Array;
   private globalMiddlewares: Middleware[] = [];
 
   constructor(config?: ServerConfig) {
