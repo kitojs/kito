@@ -8,7 +8,7 @@ import type {
 } from '../types/server.d.ts';
 import { loadFunctions } from './ffi/loader.ts';
 import { route, type InferType, RouteBuilder, SchemaType } from './schema.ts';
-import { pack as encode, unpack as decode } from 'msgpackr';
+import { encode, decode } from 'msgpackr';
 
 const routesId: Record<string, number> = {
   GET: 0,
