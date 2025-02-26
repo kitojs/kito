@@ -12,7 +12,8 @@
   "license": "MIT",
   "scripts": {
     "fmt:prettier": "prettier --config .prettierrc -w .",
-    "bench": "node bench/start.js"
+    "bench": "node bench/start.js",
+    "postinstall": "node scripts/postinstall.mjs"
   },
   "dependencies": {
     "msgpackr": "^1.11.2"
