@@ -44,7 +44,7 @@
           # { arch = "i686"; os = "windows"; target = "i686-pc-windows-msvc"; }
           { arch = "aarch64"; os = "linux"; target = "aarch64-unknown-linux-gnu"; }
           { arch = "aarch64"; os = "macos"; target = "aarch64-apple-darwin"; }
-          { arch = "riscv32-gc"; os = "linux"; target = "riscv32gc-unknown-linux-gnu"; }
+          # { arch = "riscv32-gc"; os = "linux"; target = "riscv32gc-unknown-linux-gnu"; }
           { arch = "riscv64-gc"; os = "linux"; target = "riscv64gc-unknown-linux-gnu"; }
         ];
 
@@ -57,11 +57,35 @@
           LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath libraries;
         };
 
-        mkPackage = { target, ... }: (craneLib target).buildPackage {
+        mkPackage = { os, target, ... }: (craneLib target).buildPackage {
           src = (craneLib target).cleanCargoSource ./.;
           strictDeps = true;
           doCheck = false;
           CARGO_BUILD_TARGET = target;
+
+          HOST_CC = "${pkgs.stdenv.cc.nativePrefix}cc";
+          TARGET_CC = lib.optionalString (os == "windows")
+            "${pkgs.pkgsCross.mingwW64.stdenv.cc}/bin/${pkgs.pkgsCross.mingwW64.stdenv.cc.targetPrefix}cc"
+            + lib.optionalString (os != "windows")
+              "${pkgs.stdenv.cc.targetPrefix}cc";
+
+          preBuild = lib.optionalString (os == "macos") ''
+            export CC="clang"
+            export CXX="clang++"
+            export CFLAGS="-arch x86_64 -mmacosx-version-min=10.7"
+            export CXXFLAGS="-arch x86_64 -mmacosx-version-min=10.7"
+          '' + lib.optionalString (os == "windows") ''
+            export AR="lib.exe"
+            export CC="cl.exe"
+            export CXX="cl.exe"
+          '';
+
+          buildInputs = with pkgs; [ stdenv.cc ]
+          ++ lib.optionals (os == "macos") [ clang darwin.apple_sdk.frameworks.CoreFoundation ]
+          ++ lib.optionals (os == "windows") [
+            pkgsCross.mingwW64.stdenv.cc
+            pkgsCross.mingwW64.windows.pthreads
+          ];
         };
 
         libraries = with pkgs; [ libuuid ];
