@@ -1,5 +1,7 @@
 mod server;
+mod schema;
 
+use schema::RouteSchema;
 use serde::Deserialize;
 use server::Server;
 
@@ -29,10 +31,12 @@ pub fn invoke_callback(data: &[u8]) -> Vec<u8> {
     b"{}".to_vec()
 }
 
+
 #[derive(Debug, Deserialize)]
 struct Route {
     path: String,
     method: String,
+    schema: Option<RouteSchema>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -56,12 +60,13 @@ pub extern "C" fn run(config_ptr: *const u8, len: usize) {
 
     let mut server = Server::new();
     for route in config.routes {
-        println!("route: {} {}", route.method, route.path);
-        server.add_route(route.path, method_type_from_string(&route.method));
+        println!("route: {} {}, with schema: {:?}", route.method, route.path, route.schema.is_some());
+        server.add_route(route.path, method_type_from_string(&route.method), route.schema);
     }
 
     server.listen(config.host, config.port);
 }
+
 
 #[inline(always)]
 fn method_type_from_string(method: &str) -> u8 {

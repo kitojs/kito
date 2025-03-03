@@ -7,12 +7,13 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::invoke_callback;
+use crate::schema::{validate_params, RouteSchema};
 use rmp_serde::{from_slice, to_vec};
 use serde::Deserialize;
 use serde_json::json;
 
 pub struct Server {
-    pub routes: Vec<(Arc<str>, u8)>,
+    pub routes: Vec<(Arc<str>, u8, Option<RouteSchema>)>,
 }
 
 impl Server {
@@ -22,9 +23,9 @@ impl Server {
         }
     }
 
-    pub fn add_route(&mut self, path: String, method_type: u8) {
+    pub fn add_route(&mut self, path: String, method_type: u8, schema: Option<RouteSchema>) {
         let arc_path: Arc<str> = Arc::from(path);
-        self.routes.push((arc_path, method_type));
+        self.routes.push((arc_path, method_type, schema));
     }
 
     pub fn listen(self, host: String, port: u16) {
@@ -34,8 +35,9 @@ impl Server {
         rt::System::new().block_on(async move {
             HttpServer::new(move || {
                 let mut app = App::new();
-                for (route_path, method) in &routes_vec {
+                for (route_path, method, schema) in &routes_vec {
                     let path_clone = Arc::clone(route_path);
+                    let schema_clone = schema.clone();
                     match method {
                         0 => {
                             app = app.route(
@@ -43,7 +45,7 @@ impl Server {
                                 web::get().to({
                                     let path_inner = Arc::clone(&path_clone);
                                     move |req: HttpRequest| {
-                                        handle_request(req, Arc::clone(&path_inner), "GET")
+                                        handle_request(req, Arc::clone(&path_inner), "GET", schema_clone.clone())
                                     }
                                 }),
                             );
@@ -54,7 +56,7 @@ impl Server {
                                 web::post().to({
                                     let path_inner = Arc::clone(&path_clone);
                                     move |req: HttpRequest| {
-                                        handle_request(req, Arc::clone(&path_inner), "POST")
+                                        handle_request(req, Arc::clone(&path_inner), "POST", schema_clone.clone())
                                     }
                                 }),
                             );
@@ -65,7 +67,7 @@ impl Server {
                                 web::put().to({
                                     let path_inner = Arc::clone(&path_clone);
                                     move |req: HttpRequest| {
-                                        handle_request(req, Arc::clone(&path_inner), "PUT")
+                                        handle_request(req, Arc::clone(&path_inner), "PUT", schema_clone.clone())
                                     }
                                 }),
                             );
@@ -76,7 +78,7 @@ impl Server {
                                 web::patch().to({
                                     let path_inner = Arc::clone(&path_clone);
                                     move |req: HttpRequest| {
-                                        handle_request(req, Arc::clone(&path_inner), "PATCH")
+                                        handle_request(req, Arc::clone(&path_inner), "PATCH", schema_clone.clone())
                                     }
                                 }),
                             );
@@ -87,7 +89,7 @@ impl Server {
                                 web::delete().to({
                                     let path_inner = Arc::clone(&path_clone);
                                     move |req: HttpRequest| {
-                                        handle_request(req, Arc::clone(&path_inner), "DELETE")
+                                        handle_request(req, Arc::clone(&path_inner), "DELETE", schema_clone.clone())
                                     }
                                 }),
                             );
@@ -131,11 +133,23 @@ struct Cookie {
     options: HashMap<String, String>,
 }
 
-pub async fn handle_request(req: HttpRequest, path: Arc<str>, method: &str) -> HttpResponse {
+async fn handle_request(
+    req: HttpRequest,
+    path: Arc<str>,
+    method: &str,
+    schema: Option<RouteSchema>
+) -> HttpResponse {
     let params: HashMap<String, String> = req.match_info()
         .iter()
         .map(|(k, v)| (k.to_string(), v.to_string()))
         .collect();
+
+    if let Some(schema_ref) = &schema {
+        if let Err(errors) = validate_params(&params, &schema_ref.params) {
+            return HttpResponse::BadRequest()
+                .json(json!({ "error": "Schema validation failed", "details": errors }));
+        }
+    }
 
     let request_obj = json!({
         "method": method,
