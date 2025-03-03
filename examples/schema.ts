@@ -1,16 +1,11 @@
-import { server, route } from '../api/src/core/server.ts';
+import { server, route, t } from '../api/src/core/server.ts';
 
 const app = server();
 
 app.get(
   route('/users/:id')
-    .params({ id: { type: 'string' } })
-    .response({
-      type: 'object',
-      properties: {
-        userId: { type: 'string' },
-      },
-    }),
+    .params({ id: t.string() })
+    .response(t.object({ userId: t.string() })),
   (req, res) => {
     res.json({ userId: req.params.id }); // ok
 

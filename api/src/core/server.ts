@@ -7,7 +7,13 @@ import type {
   MiddlewareHandler,
 } from '../types/server.d.ts';
 import { loadFunctions } from './ffi/loader.ts';
-import { route, type InferType, RouteBuilder, SchemaType } from './schema.ts';
+import {
+  route,
+  t,
+  type InferType,
+  RouteBuilder,
+  SchemaType,
+} from './schema.ts';
 import { encode, decode } from 'msgpackr';
 
 const routesId: Record<string, number> = {
@@ -584,4 +590,4 @@ function server(options?: ServerConfig): Server {
   return new Server(options);
 }
 
-export { server, route };
+export { server, route, t };

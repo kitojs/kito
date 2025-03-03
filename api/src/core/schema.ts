@@ -59,4 +59,14 @@ function route(path: string): RouteBuilder {
   return new RouteBuilder(path);
 }
 
-export { route, type InferType, SchemaType, RouteBuilder };
+const t = {
+  string: () => ({ type: 'string' }) as const,
+  number: () => ({ type: 'number' }) as const,
+  boolean: () => ({ type: 'boolean' }) as const,
+  object: <T extends Record<string, SchemaType>>(properties: T) =>
+    ({ type: 'object', properties }) as const,
+  array: <T extends SchemaType>(itemSchema: T) =>
+    ({ type: 'array', items: itemSchema }) as const,
+};
+
+export { route, t, type InferType, SchemaType, RouteBuilder };
