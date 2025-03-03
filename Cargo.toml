@@ -13,7 +13,6 @@ crate-type = ["cdylib"]
 
 [dependencies]
 actix-web = "4"
-ahash = "0.8.11"
 num_cpus = "1.16.0"
 rmp-serde = "1.3.0"
 serde = { version = "1.0.217", features = ["derive"] }
