@@ -3,7 +3,7 @@ import { server, route, t } from '../api/src/core/server.ts';
 const app = server();
 
 app.get(
-  route('/users/:id')
+  route('/users/one/:id')
     .params({ id: t.string() })
     .response(t.object({ userId: t.string() })),
   (req, res) => {
@@ -17,7 +17,7 @@ app.get(
 );
 
 app.get(
-  route('/users/:id')
+  route('/users/two/:id')
     .params({
       id: t.string({
         minLength: 3,
