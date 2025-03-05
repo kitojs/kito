@@ -275,6 +275,15 @@ class Server implements ServerInterface {
   ): void {
     let pathConverted = this.convertPath(path);
 
+    if (
+      this.routes.find(
+        (value) => value.path === pathConverted && value.method === method,
+      )
+    )
+      throw new Error(
+        `you cannot register two routes with the same path and method: ${method} ${path}`,
+      );
+
     this.routes.push({
       path: pathConverted,
       method,
