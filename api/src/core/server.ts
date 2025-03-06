@@ -7,13 +7,8 @@ import type {
   MiddlewareHandler,
 } from '../types/server.d.ts';
 import { loadFunctions } from './ffi/loader.ts';
-import {
-  route,
-  t,
-  type InferType,
-  RouteBuilder,
-  SchemaType,
-} from './schema.ts';
+import type { InferType, RouteBuilder, SchemaType } from './schema.ts';
+import { route, t } from './schema.ts';
 import { encode, decode } from 'msgpackr';
 
 const routesId: Record<string, number> = {

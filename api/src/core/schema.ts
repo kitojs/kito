@@ -88,4 +88,5 @@ const t = {
     ({ type: 'array', items: itemSchema, options: opts || null }) as const,
 };
 
-export { route, t, type InferType, SchemaType, RouteBuilder };
+export { route, t };
+export type { InferType, SchemaType, RouteBuilder };
