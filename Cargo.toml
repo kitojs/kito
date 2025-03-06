@@ -9,6 +9,7 @@ readme = "README.md"
 edition = "2021"
 
 [lib]
+name = "libkito"
 crate-type = ["cdylib"]
 
 [dependencies]
