@@ -20,6 +20,7 @@
   },
   "devDependencies": {
     "@types/deno": "^2.2.0",
+    "@types/node": "^22.13.9",
     "prettier": "3.4.2"
   }
 }
