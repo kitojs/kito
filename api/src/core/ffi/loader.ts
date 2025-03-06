@@ -1,24 +1,7 @@
-export function getFFIPath(): string {
-  let lib = '';
-  switch (Deno.build.os) {
-    case 'windows':
-      lib = 'kito.dll';
-      break;
-    case 'darwin':
-      lib = 'libkito.dylib';
-      break;
-    case 'linux':
-      lib = 'libkito.so';
-      break;
-    default:
-      throw new Error('unsupported operating system');
-  }
-
-  return `target/release/${lib}`;
-}
+import { getSuffix } from './utils.ts';
 
 export function loadFunctions(): Deno.DynamicLibrary<Deno.ForeignLibraryInterface> {
-  const path = getFFIPath();
+  const path = `target/release/libkito.${getSuffix()}`;
   const lib = Deno.dlopen(path, {
     run: {
       parameters: ['pointer', 'usize'],
