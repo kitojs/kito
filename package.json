@@ -19,6 +19,7 @@
     "msgpackr": "^1.11.2"
   },
   "devDependencies": {
+    "@types/deno": "^2.2.0",
     "prettier": "3.4.2"
   }
 }
