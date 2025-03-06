@@ -1,10 +1,11 @@
 #![allow(non_snake_case)]
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::RwLock};
 use regex::Regex;
+use std::sync::OnceLock;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct StringOptions {
     #[serde(default)]
     pub email: bool,
@@ -16,7 +17,7 @@ pub struct StringOptions {
     pub pattern: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct NumberOptions {
     #[serde(default)]
     pub max: Option<f64>,
@@ -24,7 +25,7 @@ pub struct NumberOptions {
     pub min: Option<f64>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct ArrayOptions {
     #[serde(default)]
     pub maxItems: Option<usize>,
@@ -63,66 +64,105 @@ pub struct RouteSchema {
     pub response: Option<SchemaType>,
 }
 
+#[inline(always)]
+fn email_regex() -> &'static Regex {
+    static EMAIL_REGEX: OnceLock<Regex> = OnceLock::new();
+    EMAIL_REGEX.get_or_init(|| Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").unwrap())
+}
+
+#[inline(always)]
+fn is_valid_email(email: &str) -> bool {
+    email_regex().is_match(email)
+}
+
+#[inline(always)]
+fn get_compiled_regex(pattern: &str) -> Result<Regex, regex::Error> {
+    static REGEX_CACHE: OnceLock<RwLock<HashMap<String, Regex>>> = OnceLock::new();
+    let cache_lock = REGEX_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
+
+    {
+        let cache = cache_lock.read().unwrap();
+        if let Some(regex) = cache.get(pattern) {
+            return Ok(regex.clone());
+        }
+    }
+
+    let regex = Regex::new(pattern)?;
+
+    {
+        let mut cache = cache_lock.write().unwrap();
+        cache.entry(pattern.to_string()).or_insert_with(|| regex.clone());
+    }
+
+    Ok(regex)
+}
+
+#[inline(always)]
 pub fn validate_schema(
     data: &serde_json::Value,
     schema: &SchemaType,
 ) -> Result<(), Vec<String>> {
     let mut errors = Vec::new();
+    validate_schema_internal(data, schema, &mut errors);
+    if errors.is_empty() { Ok(()) } else { Err(errors) }
+}
 
+#[inline(always)]
+fn validate_schema_internal(
+    data: &serde_json::Value,
+    schema: &SchemaType,
+    errors: &mut Vec<String>,
+) {
     match schema {
         SchemaType::String { options } => {
-            if !data.is_string() {
-                errors.push(format!("expected string, got {:?}", data));
-            } else if let Some(opts) = options {
-                let str_value = data.as_str().unwrap();
-
-                if opts.email && !is_valid_email(str_value) {
-                    errors.push(format!("string '{}' is not a valid email", str_value));
-                }
-
-                if let Some(min) = opts.minLength {
-                    if str_value.len() < min {
-                        errors.push(format!("string length {} is less than minimum {}", str_value.len(), min));
+            if let Some(str_value) = data.as_str() {
+                if let Some(opts) = options {
+                    if opts.email && !is_valid_email(str_value) {
+                        errors.push(format!("string '{}' is not a valid email", str_value));
                     }
-                }
-
-                if let Some(max) = opts.maxLength {
-                    if str_value.len() > max {
-                        errors.push(format!("string length {} is greater than maximum {}", str_value.len(), max));
+                    if let Some(min) = opts.minLength {
+                        if str_value.len() < min {
+                            errors.push(format!("string length {} is less than minimum {}", str_value.len(), min));
+                        }
                     }
-                }
-
-                if let Some(pattern) = &opts.pattern {
-                    match Regex::new(pattern) {
-                        Ok(regex) => {
-                            if !regex.is_match(str_value) {
-                                errors.push(format!("string '{}' does not match pattern '{}'", str_value, pattern));
+                    if let Some(max) = opts.maxLength {
+                        if str_value.len() > max {
+                            errors.push(format!("string length {} is greater than maximum {}", str_value.len(), max));
+                        }
+                    }
+                    if let Some(pattern) = &opts.pattern {
+                        match get_compiled_regex(pattern) {
+                            Ok(regex) => {
+                                if !regex.is_match(str_value) {
+                                    errors.push(format!("string '{}' does not match pattern '{}'", str_value, pattern));
+                                }
+                            },
+                            Err(_) => {
+                                errors.push(format!("invalid regex pattern: '{}'", pattern));
                             }
-                        },
-                        Err(_) => {
-                            errors.push(format!("invalid regex pattern: '{}'", pattern));
                         }
                     }
                 }
+            } else {
+                errors.push(format!("expected string, got {:?}", data));
             }
         },
         SchemaType::Number { options } => {
-            if !data.is_number() {
+            if let Some(num_value) = data.as_f64() {
+                if let Some(opts) = options {
+                    if let Some(min) = opts.min {
+                        if num_value < min {
+                            errors.push(format!("number {} is less than minimum {}", num_value, min));
+                        }
+                    }
+                    if let Some(max) = opts.max {
+                        if num_value > max {
+                            errors.push(format!("number {} is greater than maximum {}", num_value, max));
+                        }
+                    }
+                }
+            } else {
                 errors.push(format!("expected number, got {:?}", data));
-            } else if let Some(opts) = options {
-                let num_value = data.as_f64().unwrap();
-
-                if let Some(min) = opts.min {
-                    if num_value < min {
-                        errors.push(format!("number {} is less than minimum {}", num_value, min));
-                    }
-                }
-
-                if let Some(max) = opts.max {
-                    if num_value > max {
-                        errors.push(format!("number {} is greater than maximum {}", num_value, max));
-                    }
-                }
             }
         },
         SchemaType::Boolean => {
@@ -131,64 +171,48 @@ pub fn validate_schema(
             }
         },
         SchemaType::Object { properties } => {
-            if !data.is_object() {
-                errors.push(format!("expected object, got {:?}", data));
-            } else {
-                let obj = data.as_object().unwrap();
+            if let Some(obj) = data.as_object() {
                 for (key, prop_schema) in properties {
                     if let Some(value) = obj.get(key) {
-                        if let Err(prop_errors) = validate_schema(value, prop_schema) {
-                            for err in prop_errors {
-                                errors.push(format!("{}.{}", key, err));
-                            }
+                        let mut prop_errors = Vec::new();
+                        validate_schema_internal(value, prop_schema, &mut prop_errors);
+                        for err in prop_errors {
+                            errors.push(format!("{}.{}", key, err));
                         }
                     } else {
                         errors.push(format!("missing property: {}", key));
                     }
                 }
+            } else {
+                errors.push(format!("expected object, got {:?}", data));
             }
         },
         SchemaType::Array { items, options } => {
-            if !data.is_array() {
-                errors.push(format!("expected array, got {:?}", data));
-            } else {
-                let array = data.as_array().unwrap();
-
+            if let Some(array) = data.as_array() {
                 if let Some(opts) = options {
                     if let Some(min) = opts.minItems {
                         if array.len() < min {
                             errors.push(format!("array length {} is less than minimum {}", array.len(), min));
                         }
                     }
-
                     if let Some(max) = opts.maxItems {
                         if array.len() > max {
                             errors.push(format!("array length {} is greater than maximum {}", array.len(), max));
                         }
                     }
                 }
-
                 for (i, item) in array.iter().enumerate() {
-                    if let Err(item_errors) = validate_schema(item, items) {
-                        for err in item_errors {
-                            errors.push(format!("[{}].{}", i, err));
-                        }
+                    let mut item_errors = Vec::new();
+                    validate_schema_internal(item, items, &mut item_errors);
+                    for err in item_errors {
+                        errors.push(format!("[{}].{}", i, err));
                     }
                 }
+            } else {
+                errors.push(format!("expected array, got {:?}", data));
             }
         }
     }
-
-    if errors.is_empty() {
-        Ok(())
-    } else {
-        Err(errors)
-    }
-}
-
-fn is_valid_email(email: &str) -> bool {
-    let email_regex = Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").unwrap();
-    email_regex.is_match(email)
 }
 
 pub fn validate_params(
@@ -197,53 +221,56 @@ pub fn validate_params(
 ) -> Result<(), Vec<String>> {
     if let Some(param_schema) = schema {
         let mut errors = Vec::new();
-
         for (key, schema_type) in param_schema {
-            if let Some(param_value) = params.get(key) {
-                let converted_value = match schema_type {
-                    SchemaType::String { .. } => serde_json::Value::String(param_value.clone()),
-                    SchemaType::Number { .. } => {
-                        if let Ok(num) = param_value.parse::<f64>() {
-                            serde_json::Value::Number(serde_json::Number::from_f64(num).unwrap())
-                        } else {
-                            errors.push(format!("param '{}' is not a valid number", key));
-                            continue;
-                        }
-                    }
-                    SchemaType::Boolean => {
-                        if let Ok(b) = param_value.parse::<bool>() {
-                            serde_json::Value::Bool(b)
-                        } else {
-                            errors.push(format!("param '{}' is not a valid boolean", key));
-                            continue;
-                        }
-                    }
-                    _ => {
-                        match serde_json::from_str(param_value) {
-                            Ok(val) => val,
-                            Err(_) => {
-                                errors.push(format!("param '{}' is not valid for its schema type", key));
-                                continue;
+            match params.get(key) {
+                Some(param_value) => {
+                    let converted_value = match schema_type {
+                        SchemaType::String { .. } => serde_json::Value::String(param_value.clone()),
+                        SchemaType::Number { .. } => {
+                            match param_value.parse::<f64>() {
+                                Ok(num) => {
+                                    if let Some(num_json) = serde_json::Number::from_f64(num) {
+                                        serde_json::Value::Number(num_json)
+                                    } else {
+                                        errors.push(format!("param '{}': cannot represent {} as JSON number", key, num));
+                                        continue;
+                                    }
+                                },
+                                Err(_) => {
+                                    errors.push(format!("param '{}' is not a valid number", key));
+                                    continue;
+                                }
+                            }
+                        },
+                        SchemaType::Boolean => {
+                            match param_value.parse::<bool>() {
+                                Ok(b) => serde_json::Value::Bool(b),
+                                Err(_) => {
+                                    errors.push(format!("param '{}' is not a valid boolean", key));
+                                    continue;
+                                }
+                            }
+                        },
+                        _ => {
+                            match serde_json::from_str(param_value) {
+                                Ok(val) => val,
+                                Err(_) => {
+                                    errors.push(format!("param '{}' is not valid for its schema type", key));
+                                    continue;
+                                }
                             }
                         }
+                    };
+                    if let Err(validation_errors) = validate_schema(&converted_value, schema_type) {
+                        for err in validation_errors {
+                            errors.push(format!("param '{}': {}", key, err));
+                        }
                     }
-                };
-
-                if let Err(validation_errors) = validate_schema(&converted_value, schema_type) {
-                    for err in validation_errors {
-                        errors.push(format!("param '{}': {}", key, err));
-                    }
-                }
-            } else {
-                errors.push(format!("missing required param: {}", key));
+                },
+                None => errors.push(format!("missing required param: {}", key)),
             }
         }
-
-        if errors.is_empty() {
-            Ok(())
-        } else {
-            Err(errors)
-        }
+        if errors.is_empty() { Ok(()) } else { Err(errors) }
     } else {
         Ok(())
     }
