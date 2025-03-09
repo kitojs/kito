@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, sync::RwLock};
 use regex::Regex;
 use std::sync::OnceLock;
+use crate::error::AppError;
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct StringOptions {
@@ -64,6 +65,17 @@ pub struct RouteSchema {
     pub response: Option<SchemaType>,
 }
 
+#[derive(Debug, Clone)]
+pub struct ValidationErrors {
+    pub errors: Vec<String>,
+}
+
+impl From<Vec<String>> for ValidationErrors {
+    fn from(errors: Vec<String>) -> Self {
+        ValidationErrors { errors }
+    }
+}
+
 #[inline(always)]
 fn email_regex() -> &'static Regex {
     static EMAIL_REGEX: OnceLock<Regex> = OnceLock::new();
@@ -76,12 +88,12 @@ fn is_valid_email(email: &str) -> bool {
 }
 
 #[inline(always)]
-fn get_compiled_regex(pattern: &str) -> Result<Regex, regex::Error> {
+fn get_compiled_regex(pattern: &str) -> Result<Regex, AppError> {
     static REGEX_CACHE: OnceLock<RwLock<HashMap<String, Regex>>> = OnceLock::new();
     let cache_lock = REGEX_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
 
     {
-        let cache = cache_lock.read().unwrap();
+        let cache = cache_lock.read().map_err(|_| AppError::SchemaError("failed to acquire read lock on regex cache".into()))?;
         if let Some(regex) = cache.get(pattern) {
             return Ok(regex.clone());
         }
@@ -90,7 +102,7 @@ fn get_compiled_regex(pattern: &str) -> Result<Regex, regex::Error> {
     let regex = Regex::new(pattern)?;
 
     {
-        let mut cache = cache_lock.write().unwrap();
+        let mut cache = cache_lock.write().map_err(|_| AppError::SchemaError("failed to acquire write lock on regex cache".into()))?;
         cache.entry(pattern.to_string()).or_insert_with(|| regex.clone());
     }
 
@@ -101,10 +113,14 @@ fn get_compiled_regex(pattern: &str) -> Result<Regex, regex::Error> {
 pub fn validate_schema(
     data: &serde_json::Value,
     schema: &SchemaType,
-) -> Result<(), Vec<String>> {
+) -> Result<(), ValidationErrors> {
     let mut errors = Vec::new();
     validate_schema_internal(data, schema, &mut errors);
-    if errors.is_empty() { Ok(()) } else { Err(errors) }
+    if errors.is_empty() {
+        Ok(())
+    } else {
+        Err(ValidationErrors { errors })
+    }
 }
 
 #[inline(always)]
@@ -137,8 +153,8 @@ fn validate_schema_internal(
                                     errors.push(format!("string '{}' does not match pattern '{}'", str_value, pattern));
                                 }
                             },
-                            Err(_) => {
-                                errors.push(format!("invalid regex pattern: '{}'", pattern));
+                            Err(err) => {
+                                errors.push(format!("invalid regex pattern '{}': {}", pattern, err));
                             }
                         }
                     }
@@ -218,7 +234,7 @@ fn validate_schema_internal(
 pub fn validate_params(
     params: &HashMap<String, String>,
     schema: &Option<HashMap<String, SchemaType>>,
-) -> Result<(), Vec<String>> {
+) -> Result<(), ValidationErrors> {
     if let Some(param_schema) = schema {
         let mut errors = Vec::new();
         for (key, schema_type) in param_schema {
@@ -262,7 +278,7 @@ pub fn validate_params(
                         }
                     };
                     if let Err(validation_errors) = validate_schema(&converted_value, schema_type) {
-                        for err in validation_errors {
+                        for err in validation_errors.errors {
                             errors.push(format!("param '{}': {}", key, err));
                         }
                     }
@@ -270,7 +286,11 @@ pub fn validate_params(
                 None => errors.push(format!("missing required param: {}", key)),
             }
         }
-        if errors.is_empty() { Ok(()) } else { Err(errors) }
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(ValidationErrors { errors })
+        }
     } else {
         Ok(())
     }
