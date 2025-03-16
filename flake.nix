@@ -1,6 +1,5 @@
 {
   inputs = {
-    crane.url = "github:ipetkov/crane";
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
     rust-overlay = {
@@ -9,32 +8,24 @@
     };
   };
 
-  outputs = { crane, nixpkgs, flake-utils, rust-overlay, ... }:
-    flake-utils.lib.eachDefaultSystem (system:
+  outputs = { nixpkgs, flake-utils, rust-overlay, ... }:
+    flake-utils.lib.eachDefaultSystem (baseSystem:
       let
-        lib = pkgs.lib;
         overlays = [ (import rust-overlay) ];
-        pkgs = import nixpkgs { inherit system overlays; };
-
-        toolchain = target: (pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml).override {
-          targets = [ hostTarget target ];
+        pkgs = import nixpkgs {
+          system = baseSystem;
+          inherit overlays;
         };
-        craneLib = target: (crane.mkLib pkgs).overrideToolchain (toolchain target);
-        systemToTarget = system:
-          let
-            arch = builtins.elemAt (lib.splitString "-" system) 0;
-            os = builtins.elemAt (lib.splitString "-" system) 1;
-          in
-            if os == "darwin" then
-              "${arch}-apple-darwin"
-            else if os == "linux" then
-              "${arch}-unknown-linux-gnu"
-            else if os == "windows" then
-              "${arch}-pc-windows-msvc"
-            else
-              throw "Unsupported system: ${system}";
+        lib = pkgs.lib;
 
-        hostTarget = systemToTarget system;
+        mkCrossPkgs = { arch, os }: let
+          cross = arch + "-" + os;
+          crossSystem = lib.systems.elaborate cross;
+        in import nixpkgs {
+          inherit overlays;
+          crossSystem = if cross != "x86_64-linux" then crossSystem else null;
+          localSystem = baseSystem;
+        };
 
         architectures = [
           # { arch = "i686"; os = "linux"; target = "i686-unknown-linux-gnu"; }
@@ -45,50 +36,40 @@
           { arch = "aarch64"; os = "linux"; target = "aarch64-unknown-linux-gnu"; }
           { arch = "aarch64"; os = "macos"; target = "aarch64-apple-darwin"; }
           # { arch = "riscv32-gc"; os = "linux"; target = "riscv32gc-unknown-linux-gnu"; }
-          { arch = "riscv64-gc"; os = "linux"; target = "riscv64gc-unknown-linux-gnu"; }
+          { arch = "riscv64"; os = "linux"; target = "riscv64gc-unknown-linux-gnu"; }
         ];
 
-        mkDevShell = { arch, target, ... }: (craneLib target).devShell {
-          packages = with pkgs; [ nodejs_23 pnpm deno ];
+        mkDevShell = { arch, os, ... }: pkgs.mkShell {
+          packages = with pkgs; [ rustc cargo ];
           shellHook = ''
-            echo "DevShell for ${arch}"
+            echo "DevShell for ${arch}-${os}"
           '';
-
-          LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath libraries;
         };
 
-        mkPackage = { os, target, ... }: (craneLib target).buildPackage {
-          src = (craneLib target).cleanCargoSource ./.;
-          strictDeps = true;
+        mkPackage = { arch, os, target }: let
+          crossPkgs = mkCrossPkgs { inherit arch os; };
+        in pkgs.rustPlatform.buildRustPackage {
+          pname = "my-rust-project";
+          version = "0.1.0";
+          src = ./.;
           doCheck = false;
+          cargoLock.lockFile = ./Cargo.lock;
+
           CARGO_BUILD_TARGET = target;
-
           HOST_CC = "${pkgs.stdenv.cc.nativePrefix}cc";
-          TARGET_CC = lib.optionalString (os == "windows")
-            "${pkgs.pkgsCross.mingwW64.stdenv.cc}/bin/${pkgs.pkgsCross.mingwW64.stdenv.cc.targetPrefix}cc"
-            + lib.optionalString (os != "windows")
-              "${pkgs.stdenv.cc.targetPrefix}cc";
-
-          preBuild = lib.optionalString (os == "macos") ''
-            export CC="clang"
-            export CXX="clang++"
-            export CFLAGS="-arch x86_64 -mmacosx-version-min=10.7"
-            export CXXFLAGS="-arch x86_64 -mmacosx-version-min=10.7"
-          '' + lib.optionalString (os == "windows") ''
-            export AR="lib.exe"
-            export CC="cl.exe"
-            export CXX="cl.exe"
-          '';
+          TARGET_CC = if os == "windows" then
+            "${crossPkgs.stdenv.cc}/bin/${crossPkgs.stdenv.cc.targetPrefix}cc"
+          else
+            "${crossPkgs.stdenv.cc.targetPrefix}cc";
 
           buildInputs = with pkgs; [ stdenv.cc ]
-          ++ lib.optionals (os == "macos") [ clang darwin.apple_sdk.frameworks.CoreFoundation ]
-          ++ lib.optionals (os == "windows") [
-            pkgsCross.mingwW64.stdenv.cc
-            pkgsCross.mingwW64.windows.pthreads
-          ];
+            ++ lib.optionals (os == "linux") [ glibc ]
+            ++ lib.optionals (os == "macos") [ clang darwin.apple_sdk.frameworks.CoreFoundation ]
+            ++ lib.optionals (os == "windows") [
+              crossPkgs.stdenv.cc
+              crossPkgs.windows.pthreads
+            ];
         };
-
-        libraries = with pkgs; [ libuuid ];
 
         generatedMatrixJson = builtins.toJSON (map ({ arch, os, ... }: {
           arch = arch;
@@ -96,20 +77,21 @@
         }) architectures);
       in
       {
-        devShells = lib.listToAttrs (map ({ arch, ... }@args: {
-          name = arch;
-          value = mkDevShell args;
+        devShells = lib.listToAttrs (map ({ arch, os, target }: {
+          name = "${os}-${arch}";
+          value = mkDevShell { inherit arch os target; };
         }) architectures) // {
           # Default Devshell
           default = mkDevShell {
             arch = "x86_64";
+            os = "linux";
             target = "x86_64-unknown-linux-gnu";
           };
         };
 
-        packages = lib.listToAttrs (map ({ arch, os, target, ... }@args: {
+        packages = lib.listToAttrs (map ({ arch, os, target }: {
           name = "${os}-${arch}";
-          value = mkPackage args;
+          value = mkPackage { inherit arch os target; };
         }) architectures);
 
         apps = {
