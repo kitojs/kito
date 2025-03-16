@@ -7,8 +7,9 @@ import type {
   MiddlewareHandler,
 } from '../types/server.d.ts';
 import { loadFunctions } from './ffi/loader.ts';
-import { route, type InferType, RouteBuilder, SchemaType } from './schema.ts';
-import { pack as encode, unpack as decode } from 'msgpackr';
+import type { InferType, RouteBuilder, SchemaType } from './schema.ts';
+import { route, t } from './schema.ts';
+import { encode, decode } from 'msgpackr';
 
 const routesId: Record<string, number> = {
   GET: 0,
@@ -33,6 +34,10 @@ class Server implements ServerInterface {
     (req: Request, res: Response) => ArrayBuffer | void | Promise<void>
   > = new Map();
   private globalMiddlewares: Middleware[] = [];
+  private routeSchemas: Map<
+    string,
+    { params?: Record<string, SchemaType>; response?: SchemaType }
+  > = new Map();
 
   constructor(config?: ServerConfig) {
     const DEFAULT_CONFIG: ServerConfig = {};
@@ -59,10 +64,16 @@ class Server implements ServerInterface {
         ? { port: options, hostname: '127.0.0.1' }
         : { ...options, hostname: options.hostname || '127.0.0.1' };
 
-    const routesArray = this.routes.map((route) => ({
-      path: route.path,
-      method: route.method,
-    }));
+    const routesArray = this.routes.map((route) => {
+      const key = `${routesId[route.method]}:${route.path}`;
+      const schemaInfo = this.routeSchemas.get(key);
+
+      return {
+        path: route.path,
+        method: route.method,
+        schema: schemaInfo || null,
+      };
+    });
 
     const configObject = {
       host: portConfig.hostname,
@@ -77,6 +88,7 @@ class Server implements ServerInterface {
     const configPtr = Deno.UnsafePointer.of(encodedConfig);
     this.lib.symbols.run(configPtr, encodedConfig.byteLength);
   }
+
   private handleRequest(
     ptr: Deno.PointerValue,
     len: number,
@@ -258,6 +270,15 @@ class Server implements ServerInterface {
   ): void {
     let pathConverted = this.convertPath(path);
 
+    if (
+      this.routes.find(
+        (value) => value.path === pathConverted && value.method === method,
+      )
+    )
+      throw new Error(
+        `you cannot register two routes with the same path and method: ${method} ${path}`,
+      );
+
     this.routes.push({
       path: pathConverted,
       method,
@@ -283,70 +304,6 @@ class Server implements ServerInterface {
     this.routeMap.set(`${code}:${pathConverted}`, composed);
   }
 
-  // this is temporary, i'll have to move it to actix
-  private validateSchema(
-    data: any,
-    schema: SchemaType | Record<string, SchemaType>,
-  ): { valid: boolean; errors?: string[] } {
-    const errors: string[] = [];
-
-    if ('type' in schema) {
-      switch (schema.type) {
-        case 'string':
-          if (typeof data !== 'string') {
-            errors.push(`expected string, got ${typeof data}`);
-          }
-          break;
-        case 'number':
-          if (typeof data !== 'number') {
-            errors.push(`expected number, got ${typeof data}`);
-          }
-          break;
-        case 'boolean':
-          if (typeof data !== 'boolean') {
-            errors.push(`expected boolean, got ${typeof data}`);
-          }
-          break;
-        case 'object':
-          if (typeof data !== 'object' || data === null) {
-            errors.push(`expected object, got ${typeof data}`);
-          } else {
-            for (const [key, propSchema] of Object.entries(schema.properties)) {
-              const propResult = this.validateSchema(data[key], propSchema);
-              if (!propResult.valid) {
-                errors.push(...(propResult.errors || []));
-              }
-            }
-          }
-          break;
-        case 'array':
-          if (!Array.isArray(data)) {
-            errors.push(`expected array, got ${typeof data}`);
-          } else {
-            for (const item of data) {
-              const itemResult = this.validateSchema(item, schema.items);
-              if (!itemResult.valid) {
-                errors.push(...(itemResult.errors || []));
-              }
-            }
-          }
-          break;
-      }
-    } else {
-      for (const [key, propSchema] of Object.entries(schema)) {
-        const propResult = this.validateSchema(data[key], propSchema);
-        if (!propResult.valid) {
-          errors.push(...(propResult.errors || []));
-        }
-      }
-    }
-
-    return {
-      valid: errors.length === 0,
-      errors: errors.length > 0 ? errors : undefined,
-    };
-  }
-
   get<TParams extends Record<string, SchemaType>, TResponse extends SchemaType>(
     pathOrRoute: RouteBuilder<TParams, TResponse>,
     handler: (
@@ -369,25 +326,11 @@ class Server implements ServerInterface {
       const path = pathOrRoute.getPath();
       const schemas = pathOrRoute.getSchemas();
 
-      const validationMiddleware = (
-        req: Request,
-        res: Response,
-        next: () => void,
-      ) => {
-        if (schemas.params) {
-          const validationResult = this.validateSchema(
-            req.params,
-            schemas.params,
-          );
-          if (!validationResult.valid) {
-            res.status(400).json({ error: validationResult.errors });
-            return;
-          }
-        }
-        next();
-      };
+      const convertedPath = this.convertPath(path);
+      const routeKey = `${routesId['GET']}:${convertedPath}`;
+      this.routeSchemas.set(routeKey, schemas);
 
-      this.addRoute(path, 'GET', validationMiddleware, handler);
+      this.addRoute(path, 'GET', handler);
     }
   }
 
@@ -416,25 +359,11 @@ class Server implements ServerInterface {
       const path = pathOrRoute.getPath();
       const schemas = pathOrRoute.getSchemas();
 
-      const validationMiddleware = (
-        req: Request,
-        res: Response,
-        next: () => void,
-      ) => {
-        if (schemas.params) {
-          const validationResult = this.validateSchema(
-            req.params,
-            schemas.params,
-          );
-          if (!validationResult.valid) {
-            res.status(400).json({ error: validationResult.errors });
-            return;
-          }
-        }
-        next();
-      };
+      const convertedPath = this.convertPath(path);
+      const routeKey = `${routesId['POST']}:${convertedPath}`;
+      this.routeSchemas.set(routeKey, schemas);
 
-      this.addRoute(path, 'POST', validationMiddleware, handler);
+      this.addRoute(path, 'POST', handler);
     }
   }
 
@@ -460,25 +389,11 @@ class Server implements ServerInterface {
       const path = pathOrRoute.getPath();
       const schemas = pathOrRoute.getSchemas();
 
-      const validationMiddleware = (
-        req: Request,
-        res: Response,
-        next: () => void,
-      ) => {
-        if (schemas.params) {
-          const validationResult = this.validateSchema(
-            req.params,
-            schemas.params,
-          );
-          if (!validationResult.valid) {
-            res.status(400).json({ error: validationResult.errors });
-            return;
-          }
-        }
-        next();
-      };
+      const convertedPath = this.convertPath(path);
+      const routeKey = `${routesId['PUT']}:${convertedPath}`;
+      this.routeSchemas.set(routeKey, schemas);
 
-      this.addRoute(path, 'PUT', validationMiddleware, handler);
+      this.addRoute(path, 'PUT', handler);
     }
   }
 
@@ -507,25 +422,11 @@ class Server implements ServerInterface {
       const path = pathOrRoute.getPath();
       const schemas = pathOrRoute.getSchemas();
 
-      const validationMiddleware = (
-        req: Request,
-        res: Response,
-        next: () => void,
-      ) => {
-        if (schemas.params) {
-          const validationResult = this.validateSchema(
-            req.params,
-            schemas.params,
-          );
-          if (!validationResult.valid) {
-            res.status(400).json({ error: validationResult.errors });
-            return;
-          }
-        }
-        next();
-      };
+      const convertedPath = this.convertPath(path);
+      const routeKey = `${routesId['PATCH']}:${convertedPath}`;
+      this.routeSchemas.set(routeKey, schemas);
 
-      this.addRoute(path, 'PATCH', validationMiddleware, handler);
+      this.addRoute(path, 'PATCH', handler);
     }
   }
 
@@ -554,25 +455,11 @@ class Server implements ServerInterface {
       const path = pathOrRoute.getPath();
       const schemas = pathOrRoute.getSchemas();
 
-      const validationMiddleware = (
-        req: Request,
-        res: Response,
-        next: () => void,
-      ) => {
-        if (schemas.params) {
-          const validationResult = this.validateSchema(
-            req.params,
-            schemas.params,
-          );
-          if (!validationResult.valid) {
-            res.status(400).json({ error: validationResult.errors });
-            return;
-          }
-        }
-        next();
-      };
+      const convertedPath = this.convertPath(path);
+      const routeKey = `${routesId['DELETE']}:${convertedPath}`;
+      this.routeSchemas.set(routeKey, schemas);
 
-      this.addRoute(path, 'DELETE', validationMiddleware, handler);
+      this.addRoute(path, 'DELETE', handler);
     }
   }
   use(middleware: Middleware): void {
@@ -584,4 +471,4 @@ function server(options?: ServerConfig): Server {
   return new Server(options);
 }
 
-export { server, route };
+export { server, route, t };

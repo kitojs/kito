@@ -1,6 +1,7 @@
 {
   "name": "kito",
   "version": "1.0.0",
+  "type": "module",
   "description": "A web framework written in Rust for TypeScript",
   "readme": "README.md",
   "repository": "https://github.com/nehu3n/kito",
@@ -12,12 +13,15 @@
   "license": "MIT",
   "scripts": {
     "fmt:prettier": "prettier --config .prettierrc -w .",
-    "bench": "node bench/start.js"
+    "bench": "node bench/start.js",
+    "postinstall": "node scripts/postinstall.mjs"
   },
   "dependencies": {
     "msgpackr": "^1.11.2"
   },
   "devDependencies": {
+    "@types/deno": "^2.2.0",
+    "@types/node": "^22.13.9",
     "prettier": "3.4.2"
   }
 }

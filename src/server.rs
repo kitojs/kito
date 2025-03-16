@@ -6,13 +6,15 @@ use num_cpus;
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use crate::error::AppError;
 use crate::invoke_callback;
+use crate::schema::{validate_params, RouteSchema};
 use rmp_serde::{from_slice, to_vec};
 use serde::Deserialize;
 use serde_json::json;
 
 pub struct Server {
-    pub routes: Vec<(Arc<str>, u8)>,
+    pub routes: Vec<(Arc<str>, u8, Option<RouteSchema>)>,
 }
 
 impl Server {
@@ -22,20 +24,23 @@ impl Server {
         }
     }
 
-    pub fn add_route(&mut self, path: String, method_type: u8) {
+    pub fn add_route(&mut self, path: String, method_type: Result<u8, AppError>, schema: Option<RouteSchema>) -> Result<(), AppError> {
+        let method = method_type?;
         let arc_path: Arc<str> = Arc::from(path);
-        self.routes.push((arc_path, method_type));
+        self.routes.push((arc_path, method, schema));
+        Ok(())
     }
 
-    pub fn listen(self, host: String, port: u16) {
+    pub fn listen(self, host: String, port: u16) -> Result<(), AppError> {
         let addr = format!("{}:{}", host, port);
         let routes_vec = self.routes;
 
         rt::System::new().block_on(async move {
-            HttpServer::new(move || {
+            let server_result = HttpServer::new(move || {
                 let mut app = App::new();
-                for (route_path, method) in &routes_vec {
+                for (route_path, method, schema) in &routes_vec {
                     let path_clone = Arc::clone(route_path);
+                    let schema_clone = schema.clone();
                     match method {
                         0 => {
                             app = app.route(
@@ -43,7 +48,7 @@ impl Server {
                                 web::get().to({
                                     let path_inner = Arc::clone(&path_clone);
                                     move |req: HttpRequest| {
-                                        handle_request(req, Arc::clone(&path_inner), "GET")
+                                        handle_request(req, Arc::clone(&path_inner), "GET", schema_clone.clone())
                                     }
                                 }),
                             );
@@ -54,7 +59,7 @@ impl Server {
                                 web::post().to({
                                     let path_inner = Arc::clone(&path_clone);
                                     move |req: HttpRequest| {
-                                        handle_request(req, Arc::clone(&path_inner), "POST")
+                                        handle_request(req, Arc::clone(&path_inner), "POST", schema_clone.clone())
                                     }
                                 }),
                             );
@@ -65,7 +70,7 @@ impl Server {
                                 web::put().to({
                                     let path_inner = Arc::clone(&path_clone);
                                     move |req: HttpRequest| {
-                                        handle_request(req, Arc::clone(&path_inner), "PUT")
+                                        handle_request(req, Arc::clone(&path_inner), "PUT", schema_clone.clone())
                                     }
                                 }),
                             );
@@ -76,7 +81,7 @@ impl Server {
                                 web::patch().to({
                                     let path_inner = Arc::clone(&path_clone);
                                     move |req: HttpRequest| {
-                                        handle_request(req, Arc::clone(&path_inner), "PATCH")
+                                        handle_request(req, Arc::clone(&path_inner), "PATCH", schema_clone.clone())
                                     }
                                 }),
                             );
@@ -87,7 +92,7 @@ impl Server {
                                 web::delete().to({
                                     let path_inner = Arc::clone(&path_clone);
                                     move |req: HttpRequest| {
-                                        handle_request(req, Arc::clone(&path_inner), "DELETE")
+                                        handle_request(req, Arc::clone(&path_inner), "DELETE", schema_clone.clone())
                                     }
                                 }),
                             );
@@ -99,11 +104,12 @@ impl Server {
             })
             .workers(num_cpus::get() * 2)
             .bind(&addr)
-            .expect("failed to bind address")
+            .map_err(|e| AppError::IoError(e))?
             .run()
-            .await
-            .expect("server run failed");
-        });
+            .await;
+
+            server_result.map_err(|e| AppError::ServerError(e.to_string()))
+        })
     }
 }
 
@@ -131,13 +137,29 @@ struct Cookie {
     options: HashMap<String, String>,
 }
 
-pub async fn handle_request(req: HttpRequest, path: Arc<str>, method: &str) -> HttpResponse {
+async fn handle_request(
+    req: HttpRequest,
+    path: Arc<str>,
+    method: &str,
+    schema: Option<RouteSchema>
+) -> HttpResponse {
     let params: HashMap<String, String> = req.match_info()
         .iter()
         .map(|(k, v)| (k.to_string(), v.to_string()))
         .collect();
 
-    let request_obj = json!({
+    if let Some(schema_ref) = &schema {
+        if let Err(errors) = validate_params(&params, &schema_ref.params) {
+            return HttpResponse::BadRequest()
+                .json(json!({
+                    "error": "schema validation failed",
+                    "details": errors.errors
+                }));
+        }
+    }
+
+
+    let request_obj = match serde_json::to_value(json!({
         "method": method,
         "path": &*path,
         "headers": req
@@ -148,32 +170,53 @@ pub async fn handle_request(req: HttpRequest, path: Arc<str>, method: &str) -> H
         "query": req.query_string(),
         "url": req.uri().to_string(),
         "params": params,
-    });
+    })) {
+        Ok(value) => value,
+        Err(_) => {
+            return HttpResponse::InternalServerError()
+                .json(json!({"error": "failed to serialize request data"}));
+        }
+    };
 
-    let request_bytes = to_vec(&request_obj).unwrap();
-    let response_bytes = invoke_callback(&request_bytes);
+    let request_bytes = match to_vec(&request_obj) {
+        Ok(bytes) => bytes,
+        Err(_) => {
+            return HttpResponse::InternalServerError()
+                .json(json!({"error": "failed to encode request to messagepack"}));
+        }
+    };
+
+    let response_bytes = match invoke_callback(&request_bytes) {
+        Ok(bytes) => bytes,
+        Err(e) => {
+            return HttpResponse::InternalServerError()
+                .json(json!({"error": format!("callback error: {}", e)}));
+        }
+    };
 
     if response_bytes.is_empty() {
-        return HttpResponse::InternalServerError().body("empty response from callback");
+        return HttpResponse::InternalServerError()
+            .json(json!({"error": "empty response from callback"}));
     }
 
-    let response_obj: Response = from_slice(&response_bytes).unwrap_or_else(|e| {
-        println!("failed to decode messagepack response: {}", e);
-        Response {
-            status: 500,
-            headers: HashMap::new(),
-            cookies: vec![],
-            redirect: None,
-            append_headers: HashMap::new(),
-            body: "Internal Server Error".to_string(),
-            end: false,
+    let response_obj: Response = match from_slice(&response_bytes) {
+        Ok(response) => response,
+        Err(e) => {
+            eprintln!("failed to decode MessagePack response: {}", e);
+            return HttpResponse::InternalServerError()
+                .json(json!({"error": "failed to decode response data"}));
         }
-    });
+    };
 
-    let mut builder = HttpResponse::build(
-        actix_web::http::StatusCode::from_u16(response_obj.status)
-            .unwrap_or(actix_web::http::StatusCode::OK),
-    );
+    let status_code = match actix_web::http::StatusCode::from_u16(response_obj.status) {
+        Ok(code) => code,
+        Err(_) => {
+            return HttpResponse::InternalServerError()
+                .json(json!({"error": format!("invalid status code: {}", response_obj.status)}));
+        }
+    };
+
+    let mut builder = HttpResponse::build(status_code);
 
     for (key, value) in response_obj.headers.iter() {
         builder.insert_header((key.as_str(), value.as_str()));
@@ -219,10 +262,9 @@ pub async fn handle_request(req: HttpRequest, path: Arc<str>, method: &str) -> H
                 }
                 "expires" => {
                     if let Ok(timestamp) = opt_value.parse::<i64>() {
-                        actix_cookie = actix_cookie.expires(
-                            actix_web::cookie::time::OffsetDateTime::from_unix_timestamp(timestamp)
-                                .unwrap(),
-                        );
+                        if let Ok(dt) = actix_web::cookie::time::OffsetDateTime::from_unix_timestamp(timestamp) {
+                            actix_cookie = actix_cookie.expires(dt);
+                        }
                     }
                 }
                 _ => {}

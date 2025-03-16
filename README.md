@@ -17,12 +17,12 @@
 Kito is a high-performance backend web framework for TypeScript, written in Rust. It offers an end-to-end type-safe API inspired by **ExpressJS** with optional **tRPC** capabilities. Kito is designed for developers who value performance, simplicity, and flexibility.
 
 ```typescript
-import { server } from "kitojs"
+import { server } from 'kitojs';
 
 const app = server();
 
-app.get("/", (req, res) => {
-  res.send("Hello, world!");
+app.get('/', (req, res) => {
+  res.send('Hello, world!');
 });
 
 app.listen(3000);
@@ -39,7 +39,7 @@ Kito is **the fastest backend framework** in the JavaScript ecosystem. By levera
 > **Req/s**: Higher is better.  
 > **Latency**: Lower is better.
 
-Kito's impressive speed stems from a Rust core that minimizes JavaScript's inherent performance limitations, making it ideal for demanding applications that require **exceptional speed and scalability**. *See more benchmarks [here](./bench).*
+Kito's impressive speed stems from a Rust core that minimizes JavaScript's inherent performance limitations, making it ideal for demanding applications that require **exceptional speed and scalability**. _See more benchmarks [here](./bench)._
 
 For a deeper dive into the internal architecture, check out the full details [here]() and [here]().
 

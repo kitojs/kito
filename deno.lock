@@ -57,6 +57,8 @@
   "workspace": {
     "packageJson": {
       "dependencies": [
+        "npm:@types/deno@^2.2.0",
+        "npm:@types/node@^22.13.9",
         "npm:msgpackr@^1.11.2",
         "npm:prettier@3.4.2"
       ]
