@@ -52,23 +52,15 @@
           pname = "my-rust-project";
           version = "0.1.0";
           src = ./.;
-          doCheck = false;
           cargoLock.lockFile = ./Cargo.lock;
 
           CARGO_BUILD_TARGET = target;
-          HOST_CC = "${pkgs.stdenv.cc.nativePrefix}cc";
-          TARGET_CC = if os == "windows" then
-            "${crossPkgs.stdenv.cc}/bin/${crossPkgs.stdenv.cc.targetPrefix}cc"
-          else
-            "${crossPkgs.stdenv.cc.targetPrefix}cc";
+          HOST_CC = lib.optionalString (os != "windows") "${pkgs.stdenv.cc.nativePrefix}cc";
+          TARGET_CC = lib.optionalString (os != "windows") "${crossPkgs.stdenv.cc.targetPrefix}cc";
 
           buildInputs = with pkgs; [ ]
-            ++ lib.optionals (os == "linux") [ stdenv.cc glibc ]
-            ++ lib.optionals (os == "macos") [ stdenv.cc clang darwin.apple_sdk.frameworks.CoreFoundation ]
-            ++ lib.optionals (os == "windows") [
-              crossPkgs.stdenv.cc
-              crossPkgs.windows.pthreads
-            ];
+            ++ lib.optionals (os == "linux") [ stdenv.cc  glibc ]
+            ++ lib.optionals (os == "macos") [ clang darwin.apple_sdk.frameworks.CoreFoundation ];
         };
 
         generatedMatrixJson = builtins.toJSON (map ({ arch, os, ... }: {
