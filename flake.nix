@@ -62,9 +62,9 @@
           else
             "${crossPkgs.stdenv.cc.targetPrefix}cc";
 
-          buildInputs = with pkgs; [ stdenv.cc ]
-            ++ lib.optionals (os == "linux") [ glibc ]
-            ++ lib.optionals (os == "macos") [ clang darwin.apple_sdk.frameworks.CoreFoundation ]
+          buildInputs = with pkgs; [ ]
+            ++ lib.optionals (os == "linux") [ stdenv.cc glibc ]
+            ++ lib.optionals (os == "macos") [ stdenv.cc clang darwin.apple_sdk.frameworks.CoreFoundation ]
             ++ lib.optionals (os == "windows") [
               crossPkgs.stdenv.cc
               crossPkgs.windows.pthreads
