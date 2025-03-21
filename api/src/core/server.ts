@@ -6,10 +6,8 @@ import type {
   Middleware,
   MiddlewareHandler,
 } from '../types/server.d.ts';
-import { loadFunctions } from './ffi/loader.ts';
 import type { InferType, RouteBuilder, SchemaType } from './schema.ts';
 import { route, t } from './schema.ts';
-import { encode, decode } from 'msgpackr';
 
 const routesId: Record<string, number> = {
   GET: 0,
@@ -27,7 +25,6 @@ type RouteInfo = {
 
 class Server implements ServerInterface {
   readonly config: ServerConfig;
-  private lib: Deno.DynamicLibrary<Deno.ForeignLibraryInterface>;
   private routes: RouteInfo[] = [];
   private routeMap: Map<
     string,
@@ -42,17 +39,6 @@ class Server implements ServerInterface {
   constructor(config?: ServerConfig) {
     const DEFAULT_CONFIG: ServerConfig = {};
     this.config = { ...DEFAULT_CONFIG, ...config };
-    this.lib = loadFunctions()!;
-
-    const handleRequestPtr = new Deno.UnsafeCallback(
-      {
-        parameters: ['pointer', 'usize'],
-        result: 'pointer',
-      },
-      (ptr: Deno.PointerValue, len: number) => this.handleRequest(ptr, len),
-    );
-
-    this.lib.symbols.register_callback(handleRequestPtr.pointer);
   }
 
   listen(
@@ -81,170 +67,7 @@ class Server implements ServerInterface {
       routes: routesArray,
     };
 
-    const encodedConfig = encode(configObject);
-
     callback?.();
-
-    const configPtr = Deno.UnsafePointer.of(encodedConfig);
-    this.lib.symbols.run(configPtr, encodedConfig.byteLength);
-  }
-
-  private handleRequest(
-    ptr: Deno.PointerValue,
-    len: number,
-  ): Deno.PointerValue {
-    const requestData = new Uint8Array(
-      Deno.UnsafePointerView.getArrayBuffer(ptr, len),
-    );
-    let request: any;
-    try {
-      request = decode(requestData);
-    } catch (e) {
-      console.error('failed to decode messagepack request:', e);
-      request = {};
-    }
-    const method: string = request.method || '';
-    const path: string = request.path || '';
-
-    const key = `${routesId[method]}:${path}`;
-    const routeCallback = this.routeMap.get(key);
-    let responseBuffer: ArrayBuffer | undefined;
-    if (routeCallback) {
-      const res: Response & {
-        _buffer?: ArrayBuffer;
-        _status?: number;
-        _headers?: Record<string, string>;
-        _cookies?: string[];
-        _body?: string;
-      } = {
-        _status: 200,
-        _headers: {},
-        _cookies: [],
-        _body: '',
-        send(body: string | object) {
-          const bodyStr =
-            typeof body === 'string' ? body : JSON.stringify(body);
-          this._body = bodyStr;
-
-          if (this._cookies && this._cookies.length > 0) {
-            this._headers!['Set-Cookie'] = this._cookies.join('; ');
-          }
-
-          const responseObj = {
-            status: this._status || 200,
-            headers: this._headers,
-            body: bodyStr,
-          };
-          const encoded = encode(responseObj);
-
-          this._buffer = encoded.buffer.slice(
-            encoded.byteOffset,
-            encoded.byteOffset + encoded.byteLength,
-          );
-          return this._buffer;
-        },
-        json(obj: object) {
-          return this.send(obj);
-        },
-        status(code: number) {
-          this._status = code;
-          return this;
-        },
-        header(key: string, value: string) {
-          this._headers![key] = value;
-          return this;
-        },
-        cookie(name: string, value: string, options?: any) {
-          let cookieStr = `${name}=${value}`;
-          if (options) {
-            if (options.maxAge) cookieStr += `; Max-Age=${options.maxAge}`;
-            if (options.domain) cookieStr += `; Domain=${options.domain}`;
-            if (options.path) cookieStr += `; Path=${options.path}`;
-            if (options.expires)
-              cookieStr += `; Expires=${options.expires.toUTCString()}`;
-            if (options.httpOnly) cookieStr += `; HttpOnly`;
-            if (options.secure) cookieStr += `; Secure`;
-            if (options.sameSite) cookieStr += `; SameSite=${options.sameSite}`;
-          }
-          this._cookies!.push(cookieStr);
-          return this;
-        },
-        redirect(url: string) {
-          this.status(302);
-          this.header('Location', url);
-          return this.send('');
-        },
-        type(mime: string) {
-          return this.header('Content-Type', mime);
-        },
-        append(key: string, value: string) {
-          if (this._headers![key]) {
-            this._headers![key] += ', ' + value;
-          } else {
-            this._headers![key] = value;
-          }
-          return this;
-        },
-        sendStatus(code: number) {
-          this.status(code);
-          return this.send('');
-        },
-        end() {
-          return this.send('');
-        },
-      };
-
-      const result = routeCallback(
-        {
-          method,
-          headers: request.headers,
-          query: request.query,
-          body: request.body,
-          url: request.url,
-          params: request.params,
-        },
-        res,
-      );
-      if (result instanceof ArrayBuffer) {
-        responseBuffer = result;
-      } else if (res._buffer) {
-        responseBuffer = res._buffer;
-      }
-      if (!responseBuffer) {
-        console.warn('route callback did not produce a response');
-        const encoded = encode({
-          status: 500,
-          headers: {},
-          body: 'Internal Server Error',
-        });
-        responseBuffer = encoded.buffer.slice(
-          encoded.byteOffset,
-          encoded.byteOffset + encoded.byteLength,
-        );
-      }
-    } else {
-      console.warn('no route found for:', method, path);
-      const encoded = encode({
-        status: 404,
-        headers: {},
-        body: 'Not Found',
-      });
-      responseBuffer = encoded.buffer.slice(
-        encoded.byteOffset,
-        encoded.byteOffset + encoded.byteLength,
-      );
-    }
-
-    const payload = new Uint8Array(responseBuffer);
-    const totalLen = payload.length;
-    const finalBuffer = new ArrayBuffer(8 + totalLen);
-    const finalView = new DataView(finalBuffer);
-    finalView.setBigUint64(0, BigInt(totalLen), true);
-    new Uint8Array(finalBuffer, 8).set(payload);
-
-    globalThis.__responseBuffers = globalThis.__responseBuffers || [];
-    globalThis.__responseBuffers.push(finalBuffer);
-    return Deno.UnsafePointer.of(new Uint8Array(finalBuffer));
   }
 
   private convertPath(path: string): string {

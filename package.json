@@ -16,9 +16,6 @@
     "bench": "node bench/start.js",
     "postinstall": "node scripts/postinstall.mjs"
   },
-  "dependencies": {
-    "msgpackr": "^1.11.2"
-  },
   "devDependencies": {
     "@types/deno": "^2.2.0",
     "@types/node": "^22.13.9",
