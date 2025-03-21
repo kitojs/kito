@@ -1,0 +1,15 @@
+{
+  "name": "kito-darwin-universal",
+  "version": "0.0.0",
+  "os": [
+    "darwin"
+  ],
+  "main": "kito.darwin-universal.node",
+  "files": [
+    "kito.darwin-universal.node"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">= 10"
+  }
+}

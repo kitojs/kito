@@ -1,0 +1,18 @@
+{
+  "name": "kito-android-arm-eabi",
+  "version": "0.0.0",
+  "os": [
+    "android"
+  ],
+  "cpu": [
+    "arm"
+  ],
+  "main": "kito.android-arm-eabi.node",
+  "files": [
+    "kito.android-arm-eabi.node"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">= 10"
+  }
+}
