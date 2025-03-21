@@ -1,0 +1,8 @@
+{
+  "name": "@kito/server",
+  "description": "A web framework written in Rust for TypeScript",
+  "version": "0.1.0",
+  "main": "index.js",
+  "dependencies": {},
+  "scripts": {}
+}

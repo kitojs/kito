@@ -1,4 +1,4 @@
-import { server, route, t } from '../api/src/core/server.ts';
+import { server, route, t } from '../src/core/server.ts';
 
 const app = server();
 

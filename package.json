@@ -2,6 +2,10 @@
   "name": "kito",
   "version": "1.0.0",
   "type": "module",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "description": "A web framework written in Rust for TypeScript",
   "readme": "README.md",
   "repository": "https://github.com/nehu3n/kito",
