@@ -1,10 +1,9 @@
-mod server;
-mod schema;
 mod error;
+mod schema;
+mod server;
 
 use error::AppError;
-use schema::RouteSchema;
-use serde::Deserialize;
+use napi_derive::napi;
 use server::Server;
 
 static mut CALLBACK_PTR: Option<extern "C" fn(*const u8, usize) -> *const u8> = None;
@@ -27,44 +26,37 @@ pub fn invoke_callback(data: &[u8]) -> Result<Vec<u8>, AppError> {
                 let bytes = std::slice::from_raw_parts(ptr.add(8), len);
                 return Ok(bytes.to_vec());
             }
-            return Err(AppError::CallbackError("callback returned null pointer".into()));
+            return Err(AppError::CallbackError(
+                "callback returned null pointer".into(),
+            ));
         }
     }
 
     Err(AppError::CallbackError("callback not registered".into()))
 }
 
-
-#[derive(Debug, Deserialize)]
-struct Route {
-    path: String,
-    method: String,
-    schema: Option<RouteSchema>,
+#[derive(Debug)]
+#[napi(object)]
+pub struct Route {
+    pub path: String,
+    pub method: String,
+    //pub schema: Option<RouteSchema>,
 }
 
-#[derive(Debug, Deserialize)]
-struct Config {
-    host: String,
-    port: u16,
-    routes: Vec<Route>,
+#[derive(Debug)]
+#[napi(object)]
+pub struct Config {
+    pub host: String,
+    pub port: u16,
+    pub routes: Vec<Route>,
 }
 
-#[no_mangle]
-pub extern "C" fn run(config_ptr: *const u8, len: usize) {
-    let config_slice = unsafe { std::slice::from_raw_parts(config_ptr, len) };
-
-    let config: Config = match rmp_serde::from_slice(config_slice) {
-        Ok(cfg) => cfg,
-        Err(e) => {
-            eprintln!("error decoding config: {}", e);
-            return;
-        }
-    };
-
+#[napi]
+pub fn run(config: Config) {
     let mut server = Server::new();
     for route in config.routes {
-        println!("route: {} {}, with schema: {:?}", route.method, route.path, route.schema.is_some());
-        if let Err(e) = server.add_route(route.path, method_type_from_string(&route.method), route.schema) {
+        println!("route: {} {}", route.method, route.path);
+        if let Err(e) = server.add_route(route.path, method_type_from_string(&route.method), None) {
             eprintln!("error adding route: {}", e);
             return;
         }
@@ -74,7 +66,6 @@ pub extern "C" fn run(config_ptr: *const u8, len: usize) {
         eprintln!("server error: {}", e);
     }
 }
-
 
 #[inline(always)]
 fn method_type_from_string(method: &str) -> Result<u8, AppError> {

@@ -67,7 +67,7 @@ class Server implements ServerInterface {
       routes: routesArray,
     };
 
-    callback?.();
+    // run(configObject);
   }
 
   private convertPath(path: string): string {
