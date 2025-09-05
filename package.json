@@ -1,0 +1,9 @@
+{
+	"name": "kito",
+	"version": "1.0.0",
+	"description": "The Kito's workspace.",
+	"scripts": {},
+	"author": "Nehuén <github.com/nehu3n>",
+	"license": "MIT",
+	"packageManager": "pnpm@10.14.0"
+}
