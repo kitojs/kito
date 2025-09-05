@@ -1,9 +1,19 @@
 {
-	"name": "kito",
-	"version": "1.0.0",
-	"description": "The Kito's workspace.",
-	"scripts": {},
-	"author": "Nehuén <github.com/nehu3n>",
-	"license": "MIT",
-	"packageManager": "pnpm@10.14.0"
+  "name": "kito",
+  "version": "1.0.0",
+  "description": "The Kito's workspace.",
+  "scripts": {
+    "fmt": "biome format",
+    "fmt:fix": "biome format --write",
+    "lint": "biome lint",
+    "lint:fix": "biome lint --write",
+    "check": "biome check",
+    "check:fix": "biome check --write"
+  },
+  "author": "Nehuén <github.com/nehu3n>",
+  "license": "MIT",
+  "packageManager": "pnpm@10.14.0",
+  "devDependencies": {
+    "@biomejs/biome": "2.2.3"
+  }
 }
