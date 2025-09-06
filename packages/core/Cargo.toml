@@ -1,0 +1,15 @@
+[package]
+name = "core"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "core"
+crate-type = ["cdylib"]
+
+[dependencies]
+napi = { version = "3.2.4", default-features = false, features = ["async"] }
+napi-derive = "3.2.4"
+
+[build-dependencies]
+napi-build = "2.2.3"
