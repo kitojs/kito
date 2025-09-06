@@ -8,7 +8,7 @@
   },
 
   "files": {
-    "includes": ["packages", "examples", "scripts", "package.json"],
+    "includes": ["packages/**", "examples/**", "scripts/**", "package.json"],
     "ignoreUnknown": false
   },
 
