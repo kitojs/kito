@@ -1,7 +1,7 @@
 {
   "name": "kitojs",
   "version": "1.0.0",
-  "description": "🦊 The high-performance, type-safe and modern TypeScript web framework written in Rust.",
+  "description": "🐺 The high-performance, type-safe and modern TypeScript web framework written in Rust.",
   "scripts": {},
 
   "dependencies": {},
@@ -11,6 +11,15 @@
     "url": "https://github.com/kitojs/kito.git"
   },
   "homepage": "https://kito.pages.dev",
+  "bugs": {
+    "url": "https://github.com/tu-usuario/kito/issues"
+  },
+
+  "license": "MIT",
+  "author": {
+    "name": "Nehuén",
+    "url": "https://github.com/nehu3n"
+  },
 
   "type": "module",
   "main": "dist/index.js",
@@ -24,6 +33,7 @@
 
   "files": [
     "dist",
-    "readme.md"
+    "readme.md",
+    "package.json"
   ]
 }
