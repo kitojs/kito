@@ -1,0 +1,23 @@
+{
+  "name": "@kitojs/types",
+  "version": "1.0.0",
+  "description": "TypeScript types for the Kito framework.",
+  "scripts": {},
+
+  "dependencies": {},
+
+  "license": "MIT",
+
+  "type": "module",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.d.ts"
+    }
+  },
+
+  "files": [
+    "dist"
+  ]
+}
