@@ -11,6 +11,9 @@ importers:
       '@biomejs/biome':
         specifier: 2.2.3
         version: 2.2.3
+      typescript:
+        specifier: ^5.9.2
+        version: 5.9.2
 
   packages/core:
     devDependencies:
@@ -730,6 +733,11 @@ packages:
     resolution: {integrity: sha512-t0rzBq87m3fVcduHDUFhKmyyX+9eo6WQjZvf51Ea/M0Q7+T374Jp1aUiyUl0GKxp8M/OETVHSDvmkyPgvX+X2w==}
     engines: {node: '>=10'}
 
+  typescript@5.9.2:
+    resolution: {integrity: sha512-CWBzXQrc/qOkhidw1OzBTQuYRbfyxDXJMVJ1XNwUHGROVmuaeiEm3OslpZ1RV96d7SKKjZKrSJu3+t/xlw3R9A==}
+    engines: {node: '>=14.17'}
+    hasBin: true
+
   unicorn-magic@0.1.0:
     resolution: {integrity: sha512-lRfVq8fE8gz6QMBuDM6a+LO3IAzTi05H6gCVaUpir2E1Rwpo4ZUog45KpNXKC/Mn3Yb9UDuHumeFTo9iV/D9FQ==}
     engines: {node: '>=18'}
@@ -1304,6 +1312,8 @@ snapshots:
   typanion@3.14.0: {}
 
   type-fest@0.21.3: {}
+
+  typescript@5.9.2: {}
 
   unicorn-magic@0.1.0: {}
 
