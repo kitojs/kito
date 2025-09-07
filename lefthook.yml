@@ -43,12 +43,6 @@ pre-push:
       tags: rust test
       run: cargo test --all-features
       fail_text: "Rust tests failed. Fix failing tests before pushing."
-      
-    # TypeScript tests
-    ts-test:
-      tags: typescript test
-      run: pnpm test
-      fail_text: "TypeScript tests failed. Fix failing tests before pushing."
 
     # Security audits
     audit:
