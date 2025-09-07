@@ -3,7 +3,24 @@
   "version": "1.0.0",
   "description": "Internal logic (core) of the Kito framework written in Rust.",
   "scripts": {},
+
   "dependencies": {},
+  "devDependencies": {
+    "@napi-rs/cli": "^3.1.5"
+  },
+
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
 
   "napi": {
     "binaryName": "core",
