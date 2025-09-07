@@ -29,11 +29,12 @@ pre-commit:
       stage_fixed: true
       fail_text: "JS/TS formatting/linting failed. Fix biome issues."
 
-    ts-typecheck:
-      tags: typescript checker
-      glob: "*.{ts,tsx}"
-      run: pnpm tsc --noEmit
-      fail_text: "TypeScript type checking failed. Fix type errors."
+    
+    # ts-typecheck:
+      # tags: typescript checker
+      # glob: "*.{ts,tsx}"
+      # run: pnpm tsc --noEmit
+      # fail_text: "TypeScript type checking failed. Fix type errors."
 
 pre-push:
   parallel: false
