@@ -1,0 +1,29 @@
+{
+  "name": "kitojs",
+  "version": "1.0.0",
+  "description": "🦊 The high-performance, type-safe and modern TypeScript web framework written in Rust.",
+  "scripts": {},
+
+  "dependencies": {},
+
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kitojs/kito.git"
+  },
+  "homepage": "https://kito.pages.dev",
+
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+
+  "files": [
+    "dist",
+    "readme.md"
+  ]
+}
