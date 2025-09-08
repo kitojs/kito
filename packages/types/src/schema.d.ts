@@ -1,3 +1,5 @@
+import type { RouteContext } from "./ctx";
+
 export type SchemaBuilder<T> = { _output: T };
 
 export declare const t: {
@@ -42,4 +44,23 @@ export declare const t: {
 	literal: <T extends string | number | boolean>(v: T) => SchemaBuilder<T>;
 
 	optional: <T>(s: SchemaBuilder<T>) => SchemaBuilder<T | undefined>;
+};
+
+type ExtractType<T> = T extends { _output: infer O } ? O : never;
+
+export function schema<
+	P extends SchemaBuilder<any> | undefined,
+	Q extends SchemaBuilder<any> | undefined,
+	B extends SchemaBuilder<any> | undefined,
+>(cfg: {
+	params?: P;
+	query?: Q;
+	body?: B;
+}): {
+	__kitoSchema: typeof cfg;
+	__ctx: RouteContext<
+		P extends SchemaBuilder<any> ? ExtractType<P> : {},
+		Q extends SchemaBuilder<any> ? ExtractType<Q> : {},
+		B extends SchemaBuilder<any> ? ExtractType<B> : {}
+	>;
 };
