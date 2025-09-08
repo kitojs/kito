@@ -2,7 +2,7 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@kitojs/types": ["packages/types/src"]
+      "@kitojs/types": ["packages/types/src/*"]
     }
   }
 }

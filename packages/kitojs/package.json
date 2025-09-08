@@ -4,7 +4,9 @@
   "description": "🐺 The high-performance, type-safe and modern TypeScript web framework written in Rust.",
   "scripts": {},
 
-  "dependencies": {},
+  "dependencies": {
+    "@kitojs/types": "workspace:*"
+  },
 
   "repository": {
     "type": "git",
