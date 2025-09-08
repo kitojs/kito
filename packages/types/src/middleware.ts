@@ -1,4 +1,4 @@
-import type { RouteContext } from "./ctx";
+import type { RouteContext } from "./ctx.d.ts";
 
 export type Next = () => Promise<void>;
 
