@@ -1,14 +1,46 @@
-<img src="https://github.com/kitojs/.github/blob/58bb19cb207c67b9ca690e71f2b629e30bbf7b74/assets/kito-banner.png" />
-
-> [!IMPORTANT]
-> **Kito** is still in development and is not available at this time. When this notice is removed, you will know that the framework will be available.
+<div align="center">
+  <img src="https://github.com/kitojs/.github/blob/77b74df56562b7d75cf04bb7237dcd71527e6293/assets/kito-banner.png" width="220px" />
+  
+  <br />
+  <br />
+  
+  <p>
+    <strong>High-performance</strong>, fully <strong>type-safe</strong>, and modern web framework for <strong>TypeScript</strong>.  
+    Powered by <strong>Rust</strong> for extremely speed and low memory usage.
+  </p>
+</div>
 
 ---
 
-🐺 **Kito** is a **high-performance**, **type-safe**, and modern web framework for TypeScript. It's written in Rust, leading in **speed** and **low memory usage** thanks to its **highly optimized** core. With schema validation, middleware, logging, caching, testing, and **much more.**
+- **Extreme performance** – Rust core optimized for extremely speed & efficiency. **See the [benchmarks](https://github.com/kitojs/benchmarks).**
+- **Type-safe** – full TypeScript support with end-to-end safety and exceptional DX.
+- **Schema validation** – built-in validation with zero bloat.  
+- **Middleware system** – composable and flexible like you expect.  
+- **Zero dependencies** – no dependencies on the package.
+- **Cross-platform** – runs on Node.js, Bun, and Deno.  
+
+---
+
+## 🚀 Quick Start
+
+Install the official [**Kito CLI**](https://github.com/kitojs/cli) to scaffold and manage projects easily:
+
+```bash
+npm i -g @kitojs/cli
+kito new hello
+````
+
+Or install Kito directly:
+
+```bash
+pnpm add kitojs   # Or: npm i kitojs
+```
+
+### Minimal Example
 
 ```ts
 import { server } from "kitojs";
+
 const app = server();
 
 app.get("/", (ctx) => {
@@ -20,36 +52,21 @@ app.listen(3000);
 
 ---
 
-## 🚀 Quick Start
-
-We recommend installing the official [**Kito CLI**](https://github.com/kitojs/cli), which comes with built-in tools and scaffolding, perfect for starting and managing projects.
-
-```bash
-npm i -g @kitojs/cli
-```
-
-Otherwise, you can add **Kito** to your project directly as a dependency and start using it:
-
-```bash
-pnpm add kitojs   # Or: npm i kitojs
-```
-
----
-
 ## 📚 Documentation
 
-All documentation can be found on the [**official website**](https://kito.pages.dev). You can also find usage examples in this repository, [here](./examples).
+Full docs available at the [**official website**](https://kito.pages.dev).
+You can also explore ready-to-run [examples](./examples).
 
 ---
 
-## ❤️ Contributing
+## 🤝 Contributing
 
-If you're interested in contributing, you can read our [**contributing guide**](./contributing.md) to learn how to set up your environment and organize contributions properly. **Everyone is welcome!**
+We welcome contributions! Check the [**contributing guide**](./contributing.md) to learn how to set up your environment and submit pull requests.
 
 ---
 
 ## 📄 License
 
-**Kito** is licensed under the [MIT License](./license).
+Licensed under the [MIT License](./license).
 
 ---
