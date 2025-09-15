@@ -1,8 +1,0 @@
-{
-  "compilerOptions": {
-    "baseUrl": ".",
-    "paths": {
-      "@kitojs/types": ["packages/types/src/*"]
-    }
-  }
-}

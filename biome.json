@@ -8,7 +8,14 @@
   },
 
   "files": {
-    "includes": ["packages/**", "examples/**", "scripts/**", "package.json", "tsconfig.json"],
+    "includes": [
+      "packages/**",
+      "examples/**",
+      "scripts/**",
+      "package.json",
+      "tsconfig.json",
+      "tsconfig.base.json"
+    ],
     "ignoreUnknown": false
   },
 

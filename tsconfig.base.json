@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "declaration": true,
+    "declarationMap": true,
+    "outDir": "dist",
+    "strict": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "composite": true,
+    "resolveJsonModule": true,
+
+    "baseUrl": ".",
+    "paths": {
+      "@kitojs/core": ["packages/core/src"]
+    }
+  }
+}
