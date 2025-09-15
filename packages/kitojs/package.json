@@ -2,12 +2,16 @@
   "name": "kitojs",
   "version": "1.0.0",
   "description": "🐺 The high-performance, type-safe and modern TypeScript web framework written in Rust.",
-  "scripts": {},
+  "scripts": {
+    "build": "tsdown"
+  },
 
   "dependencies": {
     "@kitojs/kito-core": "workspace:*"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "tsdown": "^0.15.0"
+  },
   "peerDependencies": {
     "typescript": "^5.9.2"
   },
