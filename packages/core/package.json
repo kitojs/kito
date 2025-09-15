@@ -1,5 +1,5 @@
 {
-  "name": "@kitojs/core",
+  "name": "@kitojs/kito-core",
   "version": "1.0.0",
   "description": "Internal logic (core) of the Kito framework written in Rust.",
   "scripts": {
