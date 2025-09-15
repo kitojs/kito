@@ -1,56 +1,29 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.2.3/schema.json",
-
   "vcs": {
-    "enabled": true,
+    "enabled": false,
     "clientKind": "git",
-    "useIgnoreFile": true
+    "useIgnoreFile": false
   },
-
   "files": {
-    "includes": [
-      "packages/**",
-      "examples/**",
-      "scripts/**",
-      "package.json",
-      "tsconfig.json",
-      "tsconfig.base.json"
-    ],
-    "ignoreUnknown": false
+    "ignoreUnknown": false,
+    "includes": ["**", "packages/**", "examples/**"]
   },
-
   "formatter": {
     "enabled": true,
-    "indentStyle": "tab",
-    "lineWidth": 100,
-    "attributePosition": "multiline"
+    "indentStyle": "space"
   },
-
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true,
-      "style": {
-        "useConst": "warn"
-      }
+      "recommended": true
     }
   },
-
   "javascript": {
     "formatter": {
-      "quoteStyle": "double",
-      "trailingCommas": "all",
-      "semicolons": "always"
+      "quoteStyle": "double"
     }
   },
-
-  "json": {
-    "formatter": {
-      "indentStyle": "space",
-      "indentWidth": 2
-    }
-  },
-
   "assist": {
     "enabled": true,
     "actions": {
