@@ -34,7 +34,11 @@ importers:
         specifier: ^0.15.0
         version: 0.15.1(typescript@5.9.2)
 
-  packages/types: {}
+  packages/types:
+    devDependencies:
+      tsdown:
+        specifier: ^0.15.0
+        version: 0.15.1(typescript@5.9.2)
 
 packages:
 

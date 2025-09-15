@@ -2,10 +2,14 @@
   "name": "@kitojs/types",
   "version": "1.0.0",
   "description": "TypeScript types for the Kito framework.",
-  "scripts": {},
+  "scripts": {
+    "build": "tsdown"
+  },
 
   "dependencies": {},
-  "devDependencies": {},
+  "devDependencies": {
+    "tsdown": "^0.15.0"
+  },
 
   "repository": {
     "type": "git",
