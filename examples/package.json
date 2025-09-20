@@ -1,0 +1,17 @@
+{
+  "name": "@kitojs/examples",
+  "description": "Kito's usage examples.",
+  "private": true,
+
+  "scripts": {
+    "ex:run": "ts-node run-example.ts"
+  },
+
+  "dependencies": {
+    "kitojs": "workspace:*"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
+  }
+}

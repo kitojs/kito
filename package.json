@@ -11,13 +11,15 @@
     "check:fix": "biome check --write",
 
     "build": "pnpm -r build",
-    "dev": "pnpm -r dev"
+    "dev": "pnpm -r dev",
+    "ex:run": "pnpm --filter examples ex:run"
   },
   "author": "Nehuén <github.com/nehu3n>",
   "license": "MIT",
   "packageManager": "pnpm@10.14.0",
   "devDependencies": {
     "@biomejs/biome": "2.2.3",
+    "@types/node": "^24.5.2",
     "typescript": "^5.9.2"
   }
 }

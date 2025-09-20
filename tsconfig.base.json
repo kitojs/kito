@@ -16,7 +16,8 @@
     "baseUrl": ".",
     "paths": {
       "@kitojs/kito-core": ["packages/core/src"],
-      "@kitojs/types": ["packages/types/src"]
+      "@kitojs/types": ["packages/types/src"],
+      "kitojs": ["packages/kitojs/src"]
     }
   }
 }
