@@ -10,7 +10,8 @@
     "@kitojs/kito-core": "workspace:*"
   },
   "devDependencies": {
-    "tsdown": "^0.15.0"
+    "tsdown": "^0.15.0",
+    "@kitojs/types": "workspace:*"
   },
   "peerDependencies": {
     "typescript": "^5.9.2"
