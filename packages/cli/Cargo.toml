@@ -25,5 +25,7 @@ panic = "abort"
 strip = true
 
 [dependencies]
+async-trait = "0.1.89"
 clap = { version = "4.5.47", features = ["derive"] }
 paste = "1.0.15"
+tokio = { version = "1.47.1", features = ["full"] }
