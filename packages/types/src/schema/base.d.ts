@@ -7,7 +7,7 @@ export interface SchemaDefinition {
   headers?: SchemaType;
 }
 
-export interface InferSchemaRequest<T extends SchemaDefinition> {
+export type InferSchemaRequest<T extends SchemaDefinition> = {
   params: T["params"] extends SchemaType
     ? InferType<T["params"]>
     : Record<string, string>;
@@ -18,12 +18,14 @@ export interface InferSchemaRequest<T extends SchemaDefinition> {
   headers: T["headers"] extends SchemaType
     ? InferType<T["headers"]>
     : RequestHeaders;
-}
+};
 
 export interface SchemaType {
   _type: unknown;
   _optional: boolean;
-  _default: unknown;
+  _default?: unknown;
+  // biome-ignore lint/suspicious/noExplicitAny: ...
+  _serialize?(): any;
 }
 
 export type InferType<T extends SchemaType> = T extends {

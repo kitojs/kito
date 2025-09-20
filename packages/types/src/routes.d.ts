@@ -11,12 +11,13 @@ export type HttpMethod =
   | "OPTIONS"
   | "TRACE";
 
-export interface RouteDefinition {
+// biome-ignore lint/complexity/noBannedTypes: ...
+export interface RouteDefinition<TSchema extends SchemaDefinition = {}> {
   method: HttpMethod;
   path: string;
   middlewares: MiddlewareDefinition[];
-  handler: RouteHandler;
-  schema?: SchemaDefinition;
+  handler: RouteHandler<TSchema>;
+  schema?: TSchema;
 }
 
 export interface MiddlewareDefinition {

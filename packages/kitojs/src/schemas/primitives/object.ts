@@ -1,14 +1,16 @@
-import type { ObjectSchema, SchemaType } from "@kitojs/types";
+import type { InferType, ObjectSchema, SchemaType } from "@kitojs/types";
 
 export class ObjectSchemaImpl<T extends Record<string, SchemaType>>
   implements ObjectSchema<T>
 {
-  // biome-ignore lint/suspicious/noExplicitAny: ...
-  _type!: any;
+  _type!: { [K in keyof T]: InferType<T[K]> };
   _optional = false;
   _default: unknown = undefined;
+  shape: T;
 
-  constructor(private shape: T) {}
+  constructor(shape: T) {
+    this.shape = shape;
+  }
 
   // biome-ignore lint/suspicious/noExplicitAny: ...
   optional(): any {

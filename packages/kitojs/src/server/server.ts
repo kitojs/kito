@@ -11,7 +11,8 @@ import type {
 } from "@kitojs/types";
 
 export class KitoServer {
-  private routes: RouteDefinition[] = [];
+  // biome-ignore lint/suspicious/noExplicitAny: ...
+  private routes: RouteDefinition<any>[] = [];
   private globalMiddlewares: MiddlewareDefinition[] = [];
   private serverOptions: ServerOptions = {};
 
@@ -34,166 +35,210 @@ export class KitoServer {
     }
   }
 
-  get<TSchema = unknown>(path: string, handler: RouteHandler<TSchema>): void;
-  get<TSchema = unknown>(
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  get<TSchema extends SchemaDefinition = {}>(
     path: string,
-    middlewares: (MiddlewareDefinition | SchemaDefinition)[],
     handler: RouteHandler<TSchema>,
   ): void;
-  get<TSchema = unknown>(
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  get<TSchema extends SchemaDefinition = {}>(
+    path: string,
+    middlewares: (MiddlewareDefinition | TSchema)[],
+    handler: RouteHandler<TSchema>,
+  ): void;
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  get<TSchema extends SchemaDefinition = {}>(
     path: string,
     middlewaresOrHandler:
-      | (MiddlewareDefinition | SchemaDefinition)[]
+      | (MiddlewareDefinition | TSchema)[]
       | RouteHandler<TSchema>,
     handler?: RouteHandler<TSchema>,
   ): void {
-    this.addRoute("GET", path, middlewaresOrHandler, handler);
+    this.addRoute<TSchema>("GET", path, middlewaresOrHandler, handler);
   }
 
-  post<TSchema = unknown>(path: string, handler: RouteHandler<TSchema>): void;
-  post<TSchema = unknown>(
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  post<TSchema extends SchemaDefinition = {}>(
     path: string,
-    middlewares: (MiddlewareDefinition | SchemaDefinition)[],
     handler: RouteHandler<TSchema>,
   ): void;
-  post<TSchema = unknown>(
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  post<TSchema extends SchemaDefinition = {}>(
+    path: string,
+    middlewares: (MiddlewareDefinition | TSchema)[],
+    handler: RouteHandler<TSchema>,
+  ): void;
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  post<TSchema extends SchemaDefinition = {}>(
     path: string,
     middlewaresOrHandler:
-      | (MiddlewareDefinition | SchemaDefinition)[]
+      | (MiddlewareDefinition | TSchema)[]
       | RouteHandler<TSchema>,
     handler?: RouteHandler<TSchema>,
   ): void {
-    this.addRoute("POST", path, middlewaresOrHandler, handler);
+    this.addRoute<TSchema>("POST", path, middlewaresOrHandler, handler);
   }
 
-  put<TSchema = unknown>(path: string, handler: RouteHandler<TSchema>): void;
-  put<TSchema = unknown>(
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  put<TSchema extends SchemaDefinition = {}>(
     path: string,
-    middlewares: (MiddlewareDefinition | SchemaDefinition)[],
     handler: RouteHandler<TSchema>,
   ): void;
-  put<TSchema = unknown>(
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  put<TSchema extends SchemaDefinition = {}>(
+    path: string,
+    middlewares: (MiddlewareDefinition | TSchema)[],
+    handler: RouteHandler<TSchema>,
+  ): void;
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  put<TSchema extends SchemaDefinition = {}>(
     path: string,
     middlewaresOrHandler:
-      | (MiddlewareDefinition | SchemaDefinition)[]
+      | (MiddlewareDefinition | TSchema)[]
       | RouteHandler<TSchema>,
     handler?: RouteHandler<TSchema>,
   ): void {
-    this.addRoute("PUT", path, middlewaresOrHandler, handler);
+    this.addRoute<TSchema>("PUT", path, middlewaresOrHandler, handler);
   }
 
-  delete<TSchema = unknown>(path: string, handler: RouteHandler<TSchema>): void;
-  delete<TSchema = unknown>(
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  delete<TSchema extends SchemaDefinition = {}>(
     path: string,
-    middlewares: (MiddlewareDefinition | SchemaDefinition)[],
     handler: RouteHandler<TSchema>,
   ): void;
-  delete<TSchema = unknown>(
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  delete<TSchema extends SchemaDefinition = {}>(
+    path: string,
+    middlewares: (MiddlewareDefinition | TSchema)[],
+    handler: RouteHandler<TSchema>,
+  ): void;
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  delete<TSchema extends SchemaDefinition = {}>(
     path: string,
     middlewaresOrHandler:
-      | (MiddlewareDefinition | SchemaDefinition)[]
+      | (MiddlewareDefinition | TSchema)[]
       | RouteHandler<TSchema>,
     handler?: RouteHandler<TSchema>,
   ): void {
-    this.addRoute("DELETE", path, middlewaresOrHandler, handler);
+    this.addRoute<TSchema>("DELETE", path, middlewaresOrHandler, handler);
   }
 
-  patch<TSchema = unknown>(path: string, handler: RouteHandler<TSchema>): void;
-  patch<TSchema = unknown>(
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  patch<TSchema extends SchemaDefinition = {}>(
     path: string,
-    middlewares: (MiddlewareDefinition | SchemaDefinition)[],
     handler: RouteHandler<TSchema>,
   ): void;
-  patch<TSchema = unknown>(
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  patch<TSchema extends SchemaDefinition = {}>(
+    path: string,
+    middlewares: (MiddlewareDefinition | TSchema)[],
+    handler: RouteHandler<TSchema>,
+  ): void;
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  patch<TSchema extends SchemaDefinition = {}>(
     path: string,
     middlewaresOrHandler:
-      | (MiddlewareDefinition | SchemaDefinition)[]
+      | (MiddlewareDefinition | TSchema)[]
       | RouteHandler<TSchema>,
     handler?: RouteHandler<TSchema>,
   ): void {
-    this.addRoute("PATCH", path, middlewaresOrHandler, handler);
+    this.addRoute<TSchema>("PATCH", path, middlewaresOrHandler, handler);
   }
 
-  head<TSchema = unknown>(path: string, handler: RouteHandler<TSchema>): void;
-  head<TSchema = unknown>(
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  head<TSchema extends SchemaDefinition = {}>(
     path: string,
-    middlewares: (MiddlewareDefinition | SchemaDefinition)[],
     handler: RouteHandler<TSchema>,
   ): void;
-  head<TSchema = unknown>(
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  head<TSchema extends SchemaDefinition = {}>(
+    path: string,
+    middlewares: (MiddlewareDefinition | TSchema)[],
+    handler: RouteHandler<TSchema>,
+  ): void;
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  head<TSchema extends SchemaDefinition = {}>(
     path: string,
     middlewaresOrHandler:
-      | (MiddlewareDefinition | SchemaDefinition)[]
+      | (MiddlewareDefinition | TSchema)[]
       | RouteHandler<TSchema>,
     handler?: RouteHandler<TSchema>,
   ): void {
-    this.addRoute("HEAD", path, middlewaresOrHandler, handler);
+    this.addRoute<TSchema>("HEAD", path, middlewaresOrHandler, handler);
   }
 
-  options<TSchema = unknown>(
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  options<TSchema extends SchemaDefinition = {}>(
     path: string,
     handler: RouteHandler<TSchema>,
   ): void;
-  options<TSchema = unknown>(
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  options<TSchema extends SchemaDefinition = {}>(
     path: string,
-    middlewares: (MiddlewareDefinition | SchemaDefinition)[],
+    middlewares: (MiddlewareDefinition | TSchema)[],
     handler: RouteHandler<TSchema>,
   ): void;
-  options<TSchema = unknown>(
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  options<TSchema extends SchemaDefinition = {}>(
     path: string,
     middlewaresOrHandler:
-      | (MiddlewareDefinition | SchemaDefinition)[]
+      | (MiddlewareDefinition | TSchema)[]
       | RouteHandler<TSchema>,
     handler?: RouteHandler<TSchema>,
   ): void {
-    this.addRoute("OPTIONS", path, middlewaresOrHandler, handler);
+    this.addRoute<TSchema>("OPTIONS", path, middlewaresOrHandler, handler);
   }
 
-  private addRoute<TSchema = unknown>(
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  private addRoute<TSchema extends SchemaDefinition = {}>(
     method: HttpMethod,
     path: string,
     middlewaresOrHandler:
-      | (MiddlewareDefinition | SchemaDefinition)[]
+      | (MiddlewareDefinition | TSchema)[]
       | RouteHandler<TSchema>,
     handler?: RouteHandler<TSchema>,
   ): void {
     let finalHandler: RouteHandler<TSchema>;
-    let middlewares: (MiddlewareDefinition | SchemaDefinition)[] = [];
+    let middlewares: (MiddlewareDefinition | TSchema)[] = [];
 
     if (typeof middlewaresOrHandler === "function") {
-      finalHandler = middlewaresOrHandler;
+      finalHandler = middlewaresOrHandler as RouteHandler<TSchema>;
     } else {
-      middlewares = middlewaresOrHandler;
+      middlewares = middlewaresOrHandler as (MiddlewareDefinition | TSchema)[];
       // biome-ignore lint/style/noNonNullAssertion: ...
       finalHandler = handler!;
     }
 
     const routeMiddlewares: MiddlewareDefinition[] = [];
-    let routeSchema: SchemaDefinition | undefined;
+    let routeSchema: TSchema | undefined;
 
     for (const item of middlewares) {
       if (this.isSchemaDefinition(item)) {
-        routeSchema = item;
+        routeSchema = item as TSchema;
         routeMiddlewares.push({
           type: "schema",
-          schema: item,
+          // biome-ignore lint/suspicious/noExplicitAny: ...
+          schema: item as any,
           global: false,
         });
       } else {
         routeMiddlewares.push({
-          ...item,
+          ...(item as MiddlewareDefinition),
           global: false,
         });
       }
     }
 
-    this.routes.push({
+    const rd: RouteDefinition<TSchema> = {
       method,
       path,
       middlewares: routeMiddlewares,
-      handler: finalHandler as RouteHandler,
+      handler: finalHandler,
       schema: routeSchema,
-    });
+    };
+
+    // biome-ignore lint/suspicious/noExplicitAny: ...
+    this.routes.push(rd as RouteDefinition<any>);
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: ...

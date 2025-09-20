@@ -3,6 +3,7 @@ import type { InferType, SchemaType } from "./base";
 export interface ObjectSchema<T extends Record<string, SchemaType>>
   extends SchemaType {
   _type: { [K in keyof T]: InferType<T[K]> };
+  shape: T;
   optional(): OptionalObjectSchema<T>;
   default(value: { [K in keyof T]: InferType<T[K]> }): DefaultObjectSchema<T>;
 }
