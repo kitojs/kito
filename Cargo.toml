@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["packages/core"]
+members = ["packages/core", "packages/cli"]
 
 [profile.release]
 lto = "fat"
