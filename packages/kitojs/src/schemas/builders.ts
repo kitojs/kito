@@ -1,11 +1,11 @@
 // biome-ignore assist/source/organizeImports: ...
-import { StringSchemaImpl } from "./string";
-import { NumberSchemaImpl } from "./number";
-import { BooleanSchemaImpl } from "./boolean";
-import { ArraySchemaImpl } from "./array";
-import { ObjectSchemaImpl } from "./object";
-import { LiteralSchemaImpl } from "./literal";
-import { UnionSchemaImpl } from "./union";
+import { StringSchemaImpl } from "./primitives/string";
+import { NumberSchemaImpl } from "./primitives/number";
+import { BooleanSchemaImpl } from "./primitives/boolean";
+import { ArraySchemaImpl } from "./primitives/array";
+import { ObjectSchemaImpl } from "./primitives/object";
+import { LiteralSchemaImpl } from "./primitives/literal";
+import { UnionSchemaImpl } from "./primitives/union";
 
 import type {
   StringSchema,
