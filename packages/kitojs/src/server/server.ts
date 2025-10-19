@@ -229,16 +229,56 @@ export class KitoServer {
       }
     }
 
+    const fusedHandler = this.fuseMiddlewares(
+      this.globalMiddlewares,
+      routeMiddlewares,
+      finalHandler,
+    );
+
     const rd: RouteDefinition<TSchema> = {
       method,
       path,
       middlewares: routeMiddlewares,
-      handler: finalHandler,
+      handler: fusedHandler,
       schema: routeSchema,
     };
 
     // biome-ignore lint/suspicious/noExplicitAny: ...
     this.routes.push(rd as RouteDefinition<any>);
+  }
+
+  private fuseMiddlewares<TSchema>(
+    globals: MiddlewareDefinition[],
+    routeMiddlewares: MiddlewareDefinition[],
+    handler: RouteHandler<TSchema>,
+  ): RouteHandler<TSchema> {
+    const functions = [
+      ...globals
+        .filter((m) => m.type === "function" && m.handler)
+        // biome-ignore lint/style/noNonNullAssertion: ...
+        .map((m) => m.handler!),
+      ...routeMiddlewares
+        .filter((m) => m.type === "function" && m.handler)
+        // biome-ignore lint/style/noNonNullAssertion: ...
+        .map((m) => m.handler!),
+    ];
+
+    if (functions.length === 0) return handler;
+
+    // biome-ignore lint/suspicious/noExplicitAny: ...
+    return async (ctx: any) => {
+      let i = 0;
+      // biome-ignore lint/suspicious/noExplicitAny: ...
+      const next = async (): Promise<any> => {
+        if (i < functions.length) {
+          const fn = functions[i++];
+          return fn(ctx, next);
+        } else {
+          return handler(ctx);
+        }
+      };
+      return next();
+    };
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: ...
