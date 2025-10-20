@@ -9,12 +9,21 @@ import type {
   MiddlewareHandler,
 } from "@kitojs/types";
 
+import { ServerCore } from "@kitojs/kito-core";
+
 export class KitoServer {
   private globalMiddlewares: MiddlewareDefinition[] = [];
   private serverOptions: ServerOptions = {};
 
+  private coreServer: ServerCore;
+
   constructor(options?: ServerOptions) {
     this.serverOptions = { ...this.serverOptions, ...options };
+    this.coreServer = new ServerCore({
+      port: 3000,
+      host: "0.0.0.0",
+      ...options,
+    });
   }
 
   use(middleware: MiddlewareDefinition | MiddlewareHandler): void {
@@ -285,7 +294,7 @@ export class KitoServer {
     const finalPort = port ?? this.serverOptions.port ?? 3000;
     const finalHost = host ?? this.serverOptions.host ?? "0.0.0.0";
 
-    const configuration: ServerOptions = {
+    const configuration = {
       port: finalPort,
       host: finalHost,
       ...this.serverOptions,
@@ -293,7 +302,8 @@ export class KitoServer {
 
     console.log("config: ", JSON.stringify(configuration, null, 2));
 
-    // to-do: start server from core
+    this.coreServer.setConfig(configuration);
+    // this.coreServer.start();
   }
 }
 
