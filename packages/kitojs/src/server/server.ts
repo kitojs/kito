@@ -241,14 +241,14 @@ export class KitoServer {
       finalHandler,
     );
 
-    const _rd: RouteDefinition<TSchema> = {
+    const rd = {
       method,
       path,
       handler: fusedHandler,
-      schema: routeSchema,
+      //schema: routeSchema,
     };
 
-    // core.addRoute(rd);
+    this.coreServer.addRoute(rd);
   }
 
   private fuseMiddlewares<TSchema>(
