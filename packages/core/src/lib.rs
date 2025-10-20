@@ -1,5 +1,7 @@
+use std::{convert::Infallible, net::SocketAddr};
+
+use dashmap::DashMap;
 use once_cell::sync::Lazy;
-use std::{collections::HashMap, convert::Infallible, net::SocketAddr, sync::RwLock};
 
 use http_body_util::Full;
 use hyper::{
@@ -23,8 +25,7 @@ extern crate napi_derive;
 type RouteHandler =
     ThreadsafeFunction<Unknown<'static>, Unknown<'static>, Unknown<'static>, Status, false>;
 
-static ROUTES: Lazy<RwLock<HashMap<String, RouteHandler>>> =
-    Lazy::new(|| RwLock::new(HashMap::new()));
+static ROUTES: Lazy<DashMap<String, RouteHandler>> = Lazy::new(DashMap::new);
 
 #[napi]
 pub struct ServerCore {
@@ -74,8 +75,7 @@ impl ServerCore {
         let key = format!("{}:{}", route.method, route.path);
         let tsfn = route.handler.build_threadsafe_function().build()?;
 
-        let mut routes = ROUTES.write().unwrap();
-        routes.insert(key, tsfn);
+        ROUTES.insert(key, tsfn);
 
         Ok(())
     }
@@ -111,9 +111,7 @@ async fn handle_request(req: Request<impl Body>) -> Result<Response<Full<Bytes>>
     let path = req.uri().path().to_string();
     let key = format!("{method}:{path}");
 
-    let routes = ROUTES.read().unwrap();
-
-    if let Some(_handler) = routes.get(&key) {
+    if let Some(_handler) = ROUTES.get(&key) {
         // to-do: handler call
 
         return Ok(Response::builder()
