@@ -5,7 +5,6 @@ import type {
   MiddlewareDefinition,
   SchemaDefinition,
   ServerOptions,
-  ServerConfiguration,
   RouteHandler,
   MiddlewareHandler,
 } from "@kitojs/types";
@@ -290,68 +289,15 @@ export class KitoServer {
     const finalPort = port ?? this.serverOptions.port ?? 3000;
     const finalHost = host ?? this.serverOptions.host ?? "0.0.0.0";
 
-    const configuration: ServerConfiguration = {
-      routes: this.routes,
-      middlewares: this.globalMiddlewares,
-      config: {
-        ...this.serverOptions,
-        port: finalPort,
-        host: finalHost,
-      },
+    const configuration: ServerOptions = {
+      port: finalPort,
+      host: finalHost,
+      ...this.serverOptions,
     };
 
-    const serializedConfig = this.serializeConfiguration(configuration);
-
-    console.log("config: ", JSON.stringify(serializedConfig, null, 2));
+    console.log("config: ", JSON.stringify(configuration, null, 2));
 
     // to-do: start server from core
-  }
-
-  // biome-ignore lint/suspicious/noExplicitAny: ...
-  private serializeConfiguration(config: ServerConfiguration): any {
-    return {
-      routes: config.routes.map((route) => ({
-        method: route.method,
-        path: route.path,
-        middlewares: route.middlewares.map((m) => ({
-          type: m.type,
-          global: m.global,
-          schema: m.schema ? this.serializeSchema(m.schema) : undefined,
-        })),
-        schema: route.schema ? this.serializeSchema(route.schema) : undefined,
-      })),
-      middlewares: config.middlewares.map((m) => ({
-        type: m.type,
-        global: m.global,
-        schema: m.schema ? this.serializeSchema(m.schema) : undefined,
-      })),
-      config: config.config,
-    };
-  }
-
-  // biome-ignore lint/suspicious/noExplicitAny: ...
-  private serializeSchema(schema: SchemaDefinition): any {
-    // biome-ignore lint/suspicious/noExplicitAny: ...
-    const result: any = {};
-
-    if (schema.params) {
-      // biome-ignore lint/suspicious/noExplicitAny: ...
-      result.params = (schema.params as any)._serialize();
-    }
-    if (schema.query) {
-      // biome-ignore lint/suspicious/noExplicitAny: ...
-      result.query = (schema.query as any)._serialize();
-    }
-    if (schema.body) {
-      // biome-ignore lint/suspicious/noExplicitAny: ...
-      result.body = (schema.body as any)._serialize();
-    }
-    if (schema.headers) {
-      // biome-ignore lint/suspicious/noExplicitAny: ...
-      result.headers = (schema.headers as any)._serialize();
-    }
-
-    return result;
   }
 }
 
