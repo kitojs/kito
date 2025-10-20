@@ -15,7 +15,6 @@ export type HttpMethod =
 export interface RouteDefinition<TSchema extends SchemaDefinition = {}> {
   method: HttpMethod;
   path: string;
-  middlewares: MiddlewareDefinition[];
   handler: RouteHandler<TSchema>;
   schema?: TSchema;
 }

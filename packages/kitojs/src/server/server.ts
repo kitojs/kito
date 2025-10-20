@@ -10,8 +10,6 @@ import type {
 } from "@kitojs/types";
 
 export class KitoServer {
-  // biome-ignore lint/suspicious/noExplicitAny: ...
-  private routes: RouteDefinition<any>[] = [];
   private globalMiddlewares: MiddlewareDefinition[] = [];
   private serverOptions: ServerOptions = {};
 
@@ -234,16 +232,14 @@ export class KitoServer {
       finalHandler,
     );
 
-    const rd: RouteDefinition<TSchema> = {
+    const _rd: RouteDefinition<TSchema> = {
       method,
       path,
-      middlewares: routeMiddlewares,
       handler: fusedHandler,
       schema: routeSchema,
     };
 
-    // biome-ignore lint/suspicious/noExplicitAny: ...
-    this.routes.push(rd as RouteDefinition<any>);
+    // core.addRoute(rd);
   }
 
   private fuseMiddlewares<TSchema>(
