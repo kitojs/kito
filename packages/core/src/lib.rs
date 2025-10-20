@@ -1,4 +1,5 @@
-use std::{collections::HashMap, convert::Infallible, net::SocketAddr};
+use once_cell::sync::Lazy;
+use std::{collections::HashMap, convert::Infallible, net::SocketAddr, sync::RwLock};
 
 use http_body_util::Full;
 use hyper::{
@@ -22,10 +23,12 @@ extern crate napi_derive;
 type RouteHandler =
     ThreadsafeFunction<Unknown<'static>, Unknown<'static>, Unknown<'static>, Status, false>;
 
+static ROUTES: Lazy<RwLock<HashMap<String, RouteHandler>>> =
+    Lazy::new(|| RwLock::new(HashMap::new()));
+
 #[napi]
 pub struct ServerCore {
     config: ServerOptionsCore,
-    routes: HashMap<String, RouteHandler>,
 }
 
 #[derive(Clone)]
@@ -53,7 +56,7 @@ pub struct Route {
 impl ServerCore {
     #[napi(constructor)]
     pub fn new(config: ServerOptionsCore) -> Self {
-        ServerCore { config, routes: HashMap::new() }
+        ServerCore { config }
     }
 
     #[napi]
@@ -70,7 +73,10 @@ impl ServerCore {
     pub fn add_route(&mut self, route: Route) -> napi::Result<()> {
         let key = format!("{}:{}", route.method, route.path);
         let tsfn = route.handler.build_threadsafe_function().build()?;
-        self.routes.insert(key, tsfn);
+
+        let mut routes = ROUTES.write().unwrap();
+        routes.insert(key, tsfn);
+
         Ok(())
     }
 
@@ -86,7 +92,7 @@ impl ServerCore {
 
             tokio::task::spawn(async move {
                 if let Err(err) =
-                    http1::Builder::new().serve_connection(io, service_fn(hello)).await
+                    http1::Builder::new().serve_connection(io, service_fn(handle_request)).await
                 {
                     println!("Error serving connection: {err:?}");
                 }
@@ -100,6 +106,21 @@ impl ServerCore {
     }
 }
 
-async fn hello(_: Request<impl Body>) -> Result<Response<Full<Bytes>>, Infallible> {
-    Ok(Response::new(Full::new(Bytes::from("Hello World!"))))
+async fn handle_request(req: Request<impl Body>) -> Result<Response<Full<Bytes>>, Infallible> {
+    let method = req.method().to_string();
+    let path = req.uri().path().to_string();
+    let key = format!("{method}:{path}");
+
+    let routes = ROUTES.read().unwrap();
+
+    if let Some(_handler) = routes.get(&key) {
+        // to-do: handler call
+
+        return Ok(Response::builder()
+            .status(200)
+            .body(Full::new(Bytes::from("Handler called")))
+            .unwrap());
+    }
+
+    Ok(Response::builder().status(404).body(Full::new(Bytes::from("Not Found"))).unwrap())
 }
