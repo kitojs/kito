@@ -10,6 +10,10 @@ crate-type = ["cdylib"]
 [dependencies]
 napi = { version = "3.2.4", default-features = false, features = ["async"] }
 napi-derive = "3.2.4"
+hyper = { version = "1", features = ["full"] }
+tokio = { version = "1", features = ["full"] }
+http-body-util = "0.1"
+hyper-util = { version = "0.1", features = ["full"] }
 
 [build-dependencies]
 napi-build = "2.2.3"

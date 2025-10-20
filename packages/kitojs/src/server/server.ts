@@ -303,7 +303,7 @@ export class KitoServer {
     console.log("config: ", JSON.stringify(configuration, null, 2));
 
     this.coreServer.setConfig(configuration);
-    // this.coreServer.start();
+    await this.coreServer.start();
   }
 }
 
