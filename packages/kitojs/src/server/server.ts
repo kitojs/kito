@@ -1,15 +1,16 @@
 // biome-ignore assist/source/organizeImports: ...
 import type {
   HttpMethod,
-  RouteDefinition,
   MiddlewareDefinition,
   SchemaDefinition,
   ServerOptions,
   RouteHandler,
   MiddlewareHandler,
+  KitoContext,
 } from "@kitojs/types";
 
 import { ServerCore } from "@kitojs/kito-core";
+import { ResponseBuilder } from "./response";
 
 export class KitoServer {
   private globalMiddlewares: MiddlewareDefinition[] = [];
@@ -216,11 +217,11 @@ export class KitoServer {
     }
 
     const routeMiddlewares: MiddlewareDefinition[] = [];
-    let routeSchema: TSchema | undefined;
+    //let routeSchema: TSchema | undefined;
 
     for (const item of middlewares) {
       if (this.isSchemaDefinition(item)) {
-        routeSchema = item as TSchema;
+        //routeSchema = item as TSchema;
         routeMiddlewares.push({
           type: "schema",
           // biome-ignore lint/suspicious/noExplicitAny: ...
@@ -241,10 +242,17 @@ export class KitoServer {
       finalHandler,
     );
 
+    const routeHandler = async (ctx: KitoContext<TSchema>) => {
+      const resBuilder = new ResponseBuilder(ctx.res);
+      const context = { ...ctx, res: resBuilder };
+
+      await fusedHandler(context);
+    };
+
     const rd = {
       method,
       path,
-      handler: fusedHandler,
+      handler: routeHandler,
       //schema: routeSchema,
     };
 
