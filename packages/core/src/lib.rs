@@ -1,7 +1,6 @@
 use std::{collections::HashMap, convert::Infallible, net::SocketAddr, sync::Arc};
 
 use dashmap::DashMap;
-use futures::lock::Mutex;
 use once_cell::sync::Lazy;
 
 use http_body_util::{BodyExt, Full};
@@ -12,7 +11,13 @@ use hyper::{
     service::service_fn,
 };
 use hyper_util::rt::TokioIo;
-use tokio::{net::TcpListener, sync::oneshot};
+use tokio::{
+    net::TcpListener,
+    sync::{
+        mpsc::{self, UnboundedSender},
+        oneshot,
+    },
+};
 
 use napi::{
     Env, JsValue, Unknown,
@@ -26,7 +31,7 @@ extern crate napi_derive;
 
 type RouteHandler = ThreadsafeFunction<ContextObject, (), ContextObject, napi::Status, false>;
 
-static ROUTES: Lazy<DashMap<String, RouteHandler>> = Lazy::new(DashMap::new);
+static ROUTES: Lazy<DashMap<Box<str>, RouteHandler>> = Lazy::new(DashMap::new);
 
 #[napi]
 pub struct ServerCore {
@@ -66,8 +71,8 @@ impl RequestData {
     pub async fn new(
         req: Request<hyper::body::Incoming>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
-        let method = req.method().to_string();
-        let path = req.uri().to_string();
+        let method = req.method().as_str().to_owned();
+        let path = req.uri().path().to_owned();
         let body_bytes = req.into_body().collect().await?.to_bytes().to_vec();
 
         Ok(Self { method, path, body: body_bytes })
@@ -85,37 +90,33 @@ pub struct CookieOptionsCore {
     pub signed: Option<bool>,
 }
 
+pub enum ResponseCommand {
+    SetStatus(u16),
+    SetHeader(String, String),
+    SetHeaders(HashMap<String, String>),
+    SetCookie(String, String, CookieOptionsCore),
+    SetBody(Bytes),
+    SetRedirect(String, u16),
+    End,
+}
+
 pub struct ResponseBuilderCore {
-    pub status: u16,
-    pub headers: HashMap<String, String>,
-    pub body: Option<Vec<u8>>,
-    pub cookies: HashMap<String, (String, CookieOptionsCore)>,
-    pub end: bool,
-    pub sender: Option<oneshot::Sender<Response<Full<Bytes>>>>,
+    tx: UnboundedSender<ResponseCommand>,
 }
 
 impl ResponseBuilderCore {
-    pub fn new() -> Self {
-        Self {
-            status: 0,
-            headers: HashMap::new(),
-            body: None,
-            cookies: HashMap::new(),
-            end: false,
-            sender: None,
-        }
+    pub fn new(tx: UnboundedSender<ResponseCommand>) -> Self {
+        Self { tx }
     }
-}
 
-impl Default for ResponseBuilderCore {
-    fn default() -> Self {
-        Self::new()
+    pub fn send_command(&self, cmd: ResponseCommand) {
+        let _ = self.tx.send(cmd);
     }
 }
 
 pub struct ContextObject {
     pub req: RequestData,
-    pub res: External<Arc<Mutex<ResponseBuilderCore>>>,
+    pub res: External<Arc<ResponseBuilderCore>>,
 }
 
 impl ToNapiValue for ContextObject {
@@ -129,104 +130,73 @@ impl ToNapiValue for ContextObject {
 }
 
 #[napi]
-pub async fn set_status_response(builder: &External<Arc<Mutex<ResponseBuilderCore>>>, status: u16) {
-    let mut builder = builder.lock().await;
-    builder.status = status;
+pub fn set_status_response(builder: &External<Arc<ResponseBuilderCore>>, status: u16) {
+    builder.send_command(ResponseCommand::SetStatus(status));
 }
 
 #[napi]
-pub async fn set_header_response(
-    builder: &External<Arc<Mutex<ResponseBuilderCore>>>,
+pub fn set_header_response(
+    builder: &External<Arc<ResponseBuilderCore>>,
     name: String,
     value: String,
 ) {
-    let mut builder = builder.lock().await;
-    builder.headers.insert(name, value);
+    builder.send_command(ResponseCommand::SetHeader(name, value));
 }
 
 #[napi]
-pub async fn set_headers_response(
-    builder: &External<Arc<Mutex<ResponseBuilderCore>>>,
+pub fn set_headers_response(
+    builder: &External<Arc<ResponseBuilderCore>>,
     headers: HashMap<String, String>,
 ) {
-    let mut builder = builder.lock().await;
-    for (name, value) in headers {
-        builder.headers.insert(name, value);
-    }
+    builder.send_command(ResponseCommand::SetHeaders(headers));
 }
 
 #[napi]
-pub async fn set_cookie_response(
-    builder: &External<Arc<Mutex<ResponseBuilderCore>>>,
+pub fn set_cookie_response(
+    builder: &External<Arc<ResponseBuilderCore>>,
     name: String,
     value: String,
     options: Option<CookieOptionsCore>,
 ) {
-    let mut builder = builder.lock().await;
-    builder.cookies.insert(name, (value, options.unwrap_or_default()));
+    builder.send_command(ResponseCommand::SetCookie(name, value, options.unwrap_or_default()));
 }
 
 #[napi]
-pub async fn set_text_response(builder: &External<Arc<Mutex<ResponseBuilderCore>>>, data: String) {
-    let mut builder = builder.lock().await;
-    builder.body = Some(data.into_bytes());
+pub fn set_text_response(builder: &External<Arc<ResponseBuilderCore>>, data: String) {
+    builder.send_command(ResponseCommand::SetBody(Bytes::from(data)));
 }
 
 #[napi]
-pub async fn set_html_response(builder: &External<Arc<Mutex<ResponseBuilderCore>>>, data: String) {
-    let mut builder = builder.lock().await;
-    builder.body = Some(data.into_bytes());
+pub fn set_html_response(builder: &External<Arc<ResponseBuilderCore>>, data: String) {
+    builder.send_command(ResponseCommand::SetBody(Bytes::from(data)));
 }
 
 #[napi]
-pub fn set_json_response(builder: &External<Arc<Mutex<ResponseBuilderCore>>>, data: Unknown<'_>) {
-    let mut builder = futures::executor::block_on(builder.lock());
+pub fn set_json_response(builder: &External<Arc<ResponseBuilderCore>>, data: Unknown<'_>) {
     let json_str = data.coerce_to_string().unwrap();
-    let json_str = json_str.into_utf16().unwrap();
-    let json_str = json_str.as_str().unwrap();
-
-    builder.body = Some(json_str.into_bytes());
+    let json_bytes = json_str.into_utf8().unwrap().into_owned().unwrap();
+    builder.send_command(ResponseCommand::SetBody(Bytes::from(json_bytes)));
 }
 
 #[napi]
-pub fn set_send_response(builder: &External<Arc<Mutex<ResponseBuilderCore>>>, data: Unknown<'_>) {
-    let mut builder = futures::executor::block_on(builder.lock());
+pub fn set_send_response(builder: &External<Arc<ResponseBuilderCore>>, data: Unknown<'_>) {
     let val = data.coerce_to_string().unwrap();
-    let val = val.into_utf16().unwrap();
-    let val = val.as_str().unwrap();
-
-    builder.body = Some(val.into_bytes());
+    let val_bytes = val.into_utf8().unwrap().into_owned().unwrap();
+    builder.send_command(ResponseCommand::SetBody(Bytes::from(val_bytes)));
 }
 
 #[napi]
-pub async fn set_redirect_response(
-    builder: &External<Arc<Mutex<ResponseBuilderCore>>>,
+pub fn set_redirect_response(
+    builder: &External<Arc<ResponseBuilderCore>>,
     url: String,
     code: Option<u16>,
 ) {
-    let mut builder = builder.lock().await;
-    builder.status = code.unwrap_or(302);
-    builder.headers.insert("Location".into(), url);
+    builder.send_command(ResponseCommand::SetRedirect(url, code.unwrap_or(302)));
 }
 
 #[napi]
-pub async fn end_response(builder: &External<Arc<Mutex<ResponseBuilderCore>>>) {
-    let mut builder = builder.lock().await;
-    builder.end = true;
-
-    if let Some(sender) = builder.sender.take() {
-        let mut response =
-            Response::builder().status(if builder.status == 0 { 200 } else { builder.status });
-
-        for (name, value) in &builder.headers {
-            response = response.header(name, value);
-        }
-
-        let body_bytes = builder.body.clone().unwrap_or_default();
-        let response = response.body(Full::new(Bytes::from(body_bytes))).unwrap();
-
-        let _ = sender.send(response);
-    }
+pub fn end_response(builder: &External<Arc<ResponseBuilderCore>>) {
+    builder.send_command(ResponseCommand::End);
 }
 
 #[napi]
@@ -248,7 +218,7 @@ impl ServerCore {
 
     #[napi]
     pub fn add_route(&mut self, route: Route) -> napi::Result<()> {
-        let key = format!("{}:{}", route.method, route.path);
+        let key: Box<str> = format!("{}:{}", route.method, route.path).into_boxed_str();
         let tsfn = route.handler.build_threadsafe_function().build()?;
 
         ROUTES.insert(key, tsfn);
@@ -283,51 +253,76 @@ impl ServerCore {
 }
 
 async fn handle_request(req: Request<Incoming>) -> Result<Response<Full<Bytes>>, Infallible> {
-    let method = req.method().to_string();
-    let path = req.uri().path().to_string();
-    let key = format!("{method}:{path}");
+    let method = req.method().as_str();
+    let path = req.uri().path();
+    let key_str = format!("{method}:{path}");
 
-    if let Some(handler) = ROUTES.get(&key) {
+    if let Some(handler) = ROUTES.get(key_str.as_str()) {
         let req_data = match RequestData::new(req).await {
             Ok(data) => data,
             Err(e) => {
                 eprintln!("Error reading request body: {e}");
                 return Ok(Response::builder()
                     .status(400)
-                    .body(Full::new(Bytes::from("Bad Request")))
+                    .body(Full::new(Bytes::from_static(b"Bad Request")))
                     .unwrap());
             }
         };
 
-        let (tx, rx) = oneshot::channel();
-        let res_builder = Arc::new(Mutex::new(ResponseBuilderCore {
-            status: 0,
-            headers: HashMap::new(),
-            body: None,
-            cookies: HashMap::new(),
-            end: false,
-            sender: Some(tx),
-        }));
+        let (tx, mut rx) = mpsc::unbounded_channel();
+        let (response_tx, response_rx) = oneshot::channel();
 
-        let res_external = External::new(res_builder.clone());
+        let res_builder = Arc::new(ResponseBuilderCore::new(tx));
+        let res_external = External::new(res_builder);
         let ctx_obj = ContextObject { req: req_data, res: res_external };
 
         let _ = handler.call(ctx_obj, ThreadsafeFunctionCallMode::NonBlocking);
 
-        if let Ok(response) = rx.await {
+        tokio::spawn(async move {
+            let mut status = 200u16;
+            let mut headers = HashMap::with_capacity(8);
+            let mut body: Option<Bytes> = None;
+            let mut _cookies: HashMap<String, (String, CookieOptionsCore)> =
+                HashMap::with_capacity(4);
+
+            while let Some(cmd) = rx.recv().await {
+                match cmd {
+                    ResponseCommand::SetStatus(s) => status = s,
+                    ResponseCommand::SetHeader(name, value) => {
+                        headers.insert(name, value);
+                    }
+                    ResponseCommand::SetHeaders(h) => {
+                        headers.reserve(h.len());
+                        headers.extend(h);
+                    }
+                    ResponseCommand::SetCookie(name, value, options) => {
+                        _cookies.insert(name, (value, options));
+                    }
+                    ResponseCommand::SetBody(b) => body = Some(b),
+                    ResponseCommand::SetRedirect(url, code) => {
+                        status = code;
+                        headers.insert("Location".into(), url);
+                    }
+                    ResponseCommand::End => {
+                        let mut response = Response::builder().status(status);
+                        for (name, value) in &headers {
+                            response = response.header(name, value);
+                        }
+                        let body_bytes = body.unwrap_or_else(|| Bytes::new());
+                        let response = response.body(Full::new(body_bytes)).unwrap();
+                        let _ = response_tx.send(response);
+                        break;
+                    }
+                }
+            }
+        });
+
+        if let Ok(response) = response_rx.await {
             return Ok(response);
         }
 
-        let builder_ref = res_builder.lock().await;
-        let status = if builder_ref.status == 0 { 200 } else { builder_ref.status };
-        let mut response = Response::builder().status(status);
-        for (name, value) in &builder_ref.headers {
-            response = response.header(name, value);
-        }
-
-        let body_bytes = builder_ref.body.clone().unwrap_or_default();
-        return Ok(response.body(Full::new(Bytes::from(body_bytes))).unwrap());
+        return Ok(Response::builder().status(200).body(Full::new(Bytes::new())).unwrap());
     }
 
-    Ok(Response::builder().status(404).body(Full::new(Bytes::from("Not Found"))).unwrap())
+    Ok(Response::builder().status(404).body(Full::new(Bytes::from_static(b"Not Found"))).unwrap())
 }
