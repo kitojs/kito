@@ -63,8 +63,13 @@ pub struct Route {
 #[napi(object)]
 pub struct RequestData {
     pub method: String,
-    pub path: String,
+    pub url: String,
+    pub headers: HashMap<String, String>,
+    pub params: HashMap<String, String>,
+    pub query: HashMap<String, Vec<String>>,
     pub body: Vec<u8>,
+    pub pathname: String,
+    pub search: Option<String>,
 }
 
 impl RequestData {
@@ -72,10 +77,41 @@ impl RequestData {
         req: Request<hyper::body::Incoming>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let method = req.method().as_str().to_owned();
-        let path = req.uri().path().to_owned();
+        let uri = req.uri();
+        let url = uri.to_string();
+        let pathname = uri.path().to_owned();
+        let search = uri.query().map(|q| format!("?{q}"));
+
+        let mut headers = HashMap::with_capacity(req.headers().len());
+        for (name, value) in req.headers() {
+            if let Ok(v) = value.to_str() {
+                headers.insert(name.as_str().to_owned(), v.to_owned());
+            }
+        }
+
+        let mut query: HashMap<String, Vec<String>> = HashMap::new();
+        if let Some(q) = uri.query() {
+            for pair in q.split('&') {
+                if let Some((key, value)) = pair.split_once('=') {
+                    let decoded_key = urlencoding::decode(key).unwrap_or_default().into_owned();
+                    let decoded_value = urlencoding::decode(value).unwrap_or_default().into_owned();
+                    query.entry(decoded_key).or_insert_with(Vec::new).push(decoded_value);
+                }
+            }
+        }
+
         let body_bytes = req.into_body().collect().await?.to_bytes().to_vec();
 
-        Ok(Self { method, path, body: body_bytes })
+        Ok(Self {
+            method,
+            url,
+            headers,
+            params: HashMap::new(),
+            query,
+            body: body_bytes,
+            pathname,
+            search,
+        })
     }
 }
 
@@ -254,8 +290,8 @@ impl ServerCore {
 
 async fn handle_request(req: Request<Incoming>) -> Result<Response<Full<Bytes>>, Infallible> {
     let method = req.method().as_str();
-    let path = req.uri().path();
-    let key_str = format!("{method}:{path}");
+    let pathname = req.uri().path();
+    let key_str = format!("{method}:{pathname}");
 
     if let Some(handler) = ROUTES.get(key_str.as_str()) {
         let req_data = match RequestData::new(req).await {
