@@ -31,7 +31,14 @@ extern crate napi_derive;
 
 type RouteHandler = ThreadsafeFunction<ContextObject, (), ContextObject, napi::Status, false>;
 
-static ROUTES: Lazy<DashMap<Box<str>, RouteHandler>> = Lazy::new(DashMap::new);
+pub struct CompiledRoute {
+    method: Box<str>,
+    path: Box<str>,
+    segments: Box<[Box<str>]>,
+    handler: RouteHandler,
+}
+
+static ROUTES: Lazy<DashMap<Box<str>, Vec<CompiledRoute>>> = Lazy::new(DashMap::new);
 
 #[napi]
 pub struct ServerCore {
@@ -254,11 +261,23 @@ impl ServerCore {
 
     #[napi]
     pub fn add_route(&mut self, route: Route) -> napi::Result<()> {
-        let key: Box<str> = format!("{}:{}", route.method, route.path).into_boxed_str();
+        let method_key: Box<str> = route.method.clone().into_boxed_str();
+        let segments: Vec<Box<str>> = route
+            .path
+            .split('/')
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string().into_boxed_str())
+            .collect();
+
         let tsfn = route.handler.build_threadsafe_function().build()?;
+        let compiled = CompiledRoute {
+            method: method_key.clone(),
+            path: route.path.clone().into_boxed_str(),
+            segments: segments.into_boxed_slice(),
+            handler: tsfn,
+        };
 
-        ROUTES.insert(key, tsfn);
-
+        ROUTES.entry(method_key).or_default().push(compiled);
         Ok(())
     }
 
@@ -290,74 +309,93 @@ impl ServerCore {
 
 async fn handle_request(req: Request<Incoming>) -> Result<Response<Full<Bytes>>, Infallible> {
     let method = req.method().as_str();
-    let pathname = req.uri().path();
-    let key_str = format!("{method}:{pathname}");
+    let pathname = req.uri().path().trim_matches('/');
+    let segments_req: Vec<&str> =
+        if pathname.is_empty() { vec![] } else { pathname.split('/').collect() };
 
-    if let Some(handler) = ROUTES.get(key_str.as_str()) {
-        let req_data = match RequestData::new(req).await {
-            Ok(data) => data,
-            Err(e) => {
-                eprintln!("Error reading request body: {e}");
-                return Ok(Response::builder()
-                    .status(400)
-                    .body(Full::new(Bytes::from_static(b"Bad Request")))
-                    .unwrap());
+    if let Some(routes_vec) = ROUTES.get(method) {
+        'outer: for route in routes_vec.iter() {
+            if route.segments.len() != segments_req.len() {
+                continue;
             }
-        };
 
-        let (tx, mut rx) = mpsc::unbounded_channel();
-        let (response_tx, response_rx) = oneshot::channel();
-
-        let res_builder = Arc::new(ResponseBuilderCore::new(tx));
-        let res_external = External::new(res_builder);
-        let ctx_obj = ContextObject { req: req_data, res: res_external };
-
-        let _ = handler.call(ctx_obj, ThreadsafeFunctionCallMode::NonBlocking);
-
-        tokio::spawn(async move {
-            let mut status = 200u16;
-            let mut headers = HashMap::with_capacity(8);
-            let mut body: Option<Bytes> = None;
-            let mut _cookies: HashMap<String, (String, CookieOptionsCore)> =
-                HashMap::with_capacity(4);
-
-            while let Some(cmd) = rx.recv().await {
-                match cmd {
-                    ResponseCommand::SetStatus(s) => status = s,
-                    ResponseCommand::SetHeader(name, value) => {
-                        headers.insert(name, value);
-                    }
-                    ResponseCommand::SetHeaders(h) => {
-                        headers.reserve(h.len());
-                        headers.extend(h);
-                    }
-                    ResponseCommand::SetCookie(name, value, options) => {
-                        _cookies.insert(name, (value, options));
-                    }
-                    ResponseCommand::SetBody(b) => body = Some(b),
-                    ResponseCommand::SetRedirect(url, code) => {
-                        status = code;
-                        headers.insert("Location".into(), url);
-                    }
-                    ResponseCommand::End => {
-                        let mut response = Response::builder().status(status);
-                        for (name, value) in &headers {
-                            response = response.header(name, value);
-                        }
-                        let body_bytes = body.unwrap_or_else(|| Bytes::new());
-                        let response = response.body(Full::new(body_bytes)).unwrap();
-                        let _ = response_tx.send(response);
-                        break;
-                    }
+            let mut params = HashMap::with_capacity(segments_req.len());
+            for (rseg, sseg) in route.segments.iter().zip(&segments_req) {
+                if let Some(param_name) = rseg.strip_prefix(':') {
+                    params.insert(param_name.to_string(), (*sseg).to_string());
+                } else if rseg.as_ref() != *sseg {
+                    continue 'outer;
                 }
             }
-        });
 
-        if let Ok(response) = response_rx.await {
-            return Ok(response);
+            let req_data = match RequestData::new(req).await {
+                Ok(mut data) => {
+                    data.params = params;
+                    data
+                }
+                Err(e) => {
+                    eprintln!("Error reading request body: {e}");
+                    return Ok(Response::builder()
+                        .status(400)
+                        .body(Full::new(Bytes::from_static(b"Bad Request")))
+                        .unwrap());
+                }
+            };
+
+            let (tx, mut rx) = mpsc::unbounded_channel();
+            let (response_tx, response_rx) = oneshot::channel();
+
+            let res_builder = Arc::new(ResponseBuilderCore::new(tx));
+            let res_external = External::new(res_builder);
+            let ctx_obj = ContextObject { req: req_data, res: res_external };
+
+            let _ = route.handler.call(ctx_obj, ThreadsafeFunctionCallMode::NonBlocking);
+
+            tokio::spawn(async move {
+                let mut status = 200u16;
+                let mut headers = HashMap::with_capacity(8);
+                let mut body: Option<Bytes> = None;
+                let mut _cookies: HashMap<String, (String, CookieOptionsCore)> =
+                    HashMap::with_capacity(4);
+
+                while let Some(cmd) = rx.recv().await {
+                    match cmd {
+                        ResponseCommand::SetStatus(s) => status = s,
+                        ResponseCommand::SetHeader(name, value) => {
+                            headers.insert(name, value);
+                        }
+                        ResponseCommand::SetHeaders(h) => {
+                            headers.reserve(h.len());
+                            headers.extend(h);
+                        }
+                        ResponseCommand::SetCookie(name, value, options) => {
+                            _cookies.insert(name, (value, options));
+                        }
+                        ResponseCommand::SetBody(b) => body = Some(b),
+                        ResponseCommand::SetRedirect(url, code) => {
+                            status = code;
+                            headers.insert("Location".into(), url);
+                        }
+                        ResponseCommand::End => {
+                            let mut response = Response::builder().status(status);
+                            for (name, value) in &headers {
+                                response = response.header(name, value);
+                            }
+                            let body_bytes = body.unwrap_or_else(|| Bytes::new());
+                            let response = response.body(Full::new(body_bytes)).unwrap();
+                            let _ = response_tx.send(response);
+                            break;
+                        }
+                    }
+                }
+            });
+
+            if let Ok(response) = response_rx.await {
+                return Ok(response);
+            }
+
+            return Ok(Response::builder().status(200).body(Full::new(Bytes::new())).unwrap());
         }
-
-        return Ok(Response::builder().status(200).body(Full::new(Bytes::new())).unwrap());
     }
 
     Ok(Response::builder().status(404).body(Full::new(Bytes::from_static(b"Not Found"))).unwrap())
