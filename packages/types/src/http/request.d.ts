@@ -15,6 +15,18 @@ export interface KitoRequest {
   params: Record<string, string>;
   query: Record<string, string | string[]>;
   body: unknown;
+
+  pathname: string;
+  search: string | null;
+  protocol: string;
+  hostname: string;
+  cookies: Record<string, string>;
+  ip: string;
+  ips: string[];
+  originalUrl: string;
+  secure: boolean;
+  xhr: boolean;
+
   raw: {
     body: Buffer;
     headers: RequestHeaders;
