@@ -77,22 +77,33 @@ pub struct RequestData {
     pub body: Vec<u8>,
     pub pathname: String,
     pub search: Option<String>,
+    pub protocol: String,
+    pub hostname: String,
+    pub cookies: HashMap<String, String>,
+    pub ip: String,
+    pub ips: Vec<String>,
+    pub original_url: String,
+    pub secure: bool,
+    pub xhr: bool,
 }
 
 impl RequestData {
     pub async fn new(
-        req: Request<hyper::body::Incoming>,
+        req: Request<Incoming>,
+        remote_addr: Option<SocketAddr>,
+        trust_proxy: bool,
     ) -> Result<Self, Box<dyn std::error::Error>> {
-        let method = req.method().as_str().to_owned();
+        let method = req.method().as_str().to_string();
         let uri = req.uri();
         let url = uri.to_string();
-        let pathname = uri.path().to_owned();
+        let pathname = uri.path().to_string();
         let search = uri.query().map(|q| format!("?{q}"));
+        let original_url = url.clone();
 
         let mut headers = HashMap::with_capacity(req.headers().len());
         for (name, value) in req.headers() {
             if let Ok(v) = value.to_str() {
-                headers.insert(name.as_str().to_owned(), v.to_owned());
+                headers.insert(name.as_str().to_string(), v.to_string());
             }
         }
 
@@ -107,7 +118,53 @@ impl RequestData {
             }
         }
 
+        let scheme = req.uri().scheme_str().unwrap_or("http").to_string();
+
         let body_bytes = req.into_body().collect().await?.to_bytes().to_vec();
+
+        let protocol = if trust_proxy {
+            headers
+                .get("x-forwarded-proto")
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| "http".to_string())
+        } else {
+            scheme
+        };
+
+        let secure = protocol.eq_ignore_ascii_case("https");
+
+        let hostname = headers.get("host").cloned().unwrap_or_else(|| "localhost".to_string());
+
+        let cookies = headers.get("cookie").map_or(HashMap::new(), |cookie_str| {
+            cookie_str
+                .split(';')
+                .filter_map(|c| {
+                    let parts: Vec<&str> = c.trim().splitn(2, '=').collect();
+                    if parts.len() == 2 {
+                        Some((parts[0].to_string(), parts[1].to_string()))
+                    } else {
+                        None
+                    }
+                })
+                .collect()
+        });
+
+        let ips: Vec<String> = if trust_proxy {
+            headers
+                .get("x-forwarded-for")
+                .map(|s| s.split(',').map(|ip| ip.trim().to_string()).collect())
+                .unwrap_or_default()
+        } else {
+            vec![]
+        };
+
+        let ip = ips
+            .first()
+            .cloned()
+            .or_else(|| remote_addr.map(|a| a.ip().to_string()))
+            .unwrap_or_default();
+
+        let xhr = headers.get("x-requested-with").map(|v| v == "XMLHttpRequest").unwrap_or(false);
 
         Ok(Self {
             method,
@@ -118,6 +175,14 @@ impl RequestData {
             body: body_bytes,
             pathname,
             search,
+            protocol,
+            hostname,
+            cookies,
+            ip,
+            ips,
+            original_url,
+            secure,
+            xhr,
         })
     }
 }
@@ -291,9 +356,18 @@ impl ServerCore {
             let (tcp, _) = listener.accept().await.unwrap();
             let io = TokioIo::new(tcp);
 
+            let config = self.config.clone();
             tokio::task::spawn(async move {
-                if let Err(err) =
-                    http1::Builder::new().serve_connection(io, service_fn(handle_request)).await
+                let config = config.clone();
+                if let Err(err) = http1::Builder::new()
+                    .serve_connection(
+                        io,
+                        service_fn(move |req| {
+                            let config = config.clone();
+                            handle_request(req, config, addr)
+                        }),
+                    )
+                    .await
                 {
                     println!("Error serving connection: {err:?}");
                 }
@@ -307,7 +381,11 @@ impl ServerCore {
     }
 }
 
-async fn handle_request(req: Request<Incoming>) -> Result<Response<Full<Bytes>>, Infallible> {
+async fn handle_request(
+    req: Request<Incoming>,
+    config: ServerOptionsCore,
+    remote_addr: SocketAddr,
+) -> Result<Response<Full<Bytes>>, Infallible> {
     let method = req.method().as_str();
     let pathname = req.uri().path().trim_matches('/');
     let segments_req: Vec<&str> =
@@ -328,19 +406,22 @@ async fn handle_request(req: Request<Incoming>) -> Result<Response<Full<Bytes>>,
                 }
             }
 
-            let req_data = match RequestData::new(req).await {
-                Ok(mut data) => {
-                    data.params = params;
-                    data
-                }
-                Err(e) => {
-                    eprintln!("Error reading request body: {e}");
-                    return Ok(Response::builder()
-                        .status(400)
-                        .body(Full::new(Bytes::from_static(b"Bad Request")))
-                        .unwrap());
-                }
-            };
+            let req_data =
+                match RequestData::new(req, Some(remote_addr), config.trust_proxy.unwrap_or(false))
+                    .await
+                {
+                    Ok(mut data) => {
+                        data.params = params;
+                        data
+                    }
+                    Err(e) => {
+                        eprintln!("Error reading request body: {e}");
+                        return Ok(Response::builder()
+                            .status(400)
+                            .body(Full::new(Bytes::from_static(b"Bad Request")))
+                            .unwrap());
+                    }
+                };
 
             let (tx, mut rx) = mpsc::unbounded_channel();
             let (response_tx, response_rx) = oneshot::channel();
