@@ -1,4 +1,7 @@
-use std::{collections::HashMap, convert::Infallible, net::SocketAddr, sync::Arc};
+use std::{
+    collections::HashMap, convert::Infallible, net::SocketAddr, path::Path, sync::Arc,
+    time::UNIX_EPOCH,
+};
 
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
@@ -12,6 +15,8 @@ use hyper::{
 };
 use hyper_util::rt::TokioIo;
 use tokio::{
+    fs::File,
+    io::AsyncReadExt,
     net::TcpListener,
     sync::{
         mpsc::{self, UnboundedSender},
@@ -190,21 +195,37 @@ impl RequestData {
 #[derive(Clone, Default)]
 #[napi(object)]
 pub struct CookieOptionsCore {
-    pub domain: String,
+    pub domain: Option<String>,
     pub http_only: Option<bool>,
-    pub max_age: Option<u32>,
+    pub max_age: Option<i32>,
     pub path: Option<String>,
     pub secure: Option<bool>,
     pub signed: Option<bool>,
+    pub same_site: Option<String>,
+}
+
+#[derive(Clone)]
+#[napi(object)]
+pub struct SendFileOptionsCore {
+    pub max_age: Option<u32>,
+    pub root: Option<String>,
+    pub last_modified: Option<bool>,
+    pub headers: Option<HashMap<String, String>>,
+    pub dotfiles: Option<String>,
+    pub accept_ranges: Option<bool>,
+    pub cache_control: Option<bool>,
+    pub immutable: Option<bool>,
 }
 
 pub enum ResponseCommand {
     SetStatus(u16),
     SetHeader(String, String),
     SetHeaders(HashMap<String, String>),
+    AppendHeader(String, String),
     SetCookie(String, String, CookieOptionsCore),
     SetBody(Bytes),
     SetRedirect(String, u16),
+    SendFile(String, Option<SendFileOptionsCore>),
     End,
 }
 
@@ -260,6 +281,15 @@ pub fn set_headers_response(
 }
 
 #[napi]
+pub fn append_header_response(
+    builder: &External<Arc<ResponseBuilderCore>>,
+    name: String,
+    value: String,
+) {
+    builder.send_command(ResponseCommand::AppendHeader(name, value));
+}
+
+#[napi]
 pub fn set_cookie_response(
     builder: &External<Arc<ResponseBuilderCore>>,
     name: String,
@@ -300,6 +330,15 @@ pub fn set_redirect_response(
     code: Option<u16>,
 ) {
     builder.send_command(ResponseCommand::SetRedirect(url, code.unwrap_or(302)));
+}
+
+#[napi]
+pub fn send_file_response(
+    builder: &External<Arc<ResponseBuilderCore>>,
+    path: String,
+    options: Option<SendFileOptionsCore>,
+) {
+    builder.send_command(ResponseCommand::SendFile(path, options));
 }
 
 #[napi]
@@ -381,6 +420,69 @@ impl ServerCore {
     }
 }
 
+fn serialize_cookie(name: &str, value: &str, options: &CookieOptionsCore) -> String {
+    let mut cookie = format!("{name}={value}");
+
+    if let Some(max_age) = options.max_age {
+        cookie.push_str(&format!("; Max-Age={max_age}"));
+    }
+
+    if let Some(ref path) = options.path {
+        cookie.push_str(&format!("; Path={path}"));
+    } else {
+        cookie.push_str("; Path=/");
+    }
+
+    if let Some(ref domain) = options.domain {
+        cookie.push_str(&format!("; Domain={domain}"));
+    }
+
+    if options.http_only.unwrap_or(false) {
+        cookie.push_str("; HttpOnly");
+    }
+
+    if options.secure.unwrap_or(false) {
+        cookie.push_str("; Secure");
+    }
+
+    if let Some(ref same_site) = options.same_site {
+        cookie.push_str(&format!("; SameSite={same_site}"));
+    }
+
+    cookie
+}
+
+#[inline(always)]
+fn get_mime_type(path: &str) -> &'static str {
+    let extension = Path::new(path).extension().and_then(|e| e.to_str()).unwrap_or("");
+
+    match extension.to_lowercase().as_str() {
+        "html" | "htm" => "text/html",
+        "css" => "text/css",
+        "js" | "mjs" => "application/javascript",
+        "json" => "application/json",
+        "xml" => "application/xml",
+        "txt" => "text/plain",
+        "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "gif" => "image/gif",
+        "svg" => "image/svg+xml",
+        "webp" => "image/webp",
+        "ico" => "image/x-icon",
+        "pdf" => "application/pdf",
+        "zip" => "application/zip",
+        "wasm" => "application/wasm",
+        "mp4" => "video/mp4",
+        "webm" => "video/webm",
+        "mp3" => "audio/mpeg",
+        "wav" => "audio/wav",
+        "woff" | "woff2" => "font/woff2",
+        "ttf" => "font/ttf",
+        "otf" => "font/otf",
+        _ => "application/octet-stream",
+    }
+}
+
 async fn handle_request(
     req: Request<Incoming>,
     config: ServerOptionsCore,
@@ -436,8 +538,7 @@ async fn handle_request(
                 let mut status = 200u16;
                 let mut headers = HashMap::with_capacity(8);
                 let mut body: Option<Bytes> = None;
-                let mut _cookies: HashMap<String, (String, CookieOptionsCore)> =
-                    HashMap::with_capacity(4);
+                let mut cookies: Vec<String> = Vec::new();
 
                 while let Some(cmd) = rx.recv().await {
                     match cmd {
@@ -449,19 +550,46 @@ async fn handle_request(
                             headers.reserve(h.len());
                             headers.extend(h);
                         }
+                        ResponseCommand::AppendHeader(name, value) => {
+                            if let Some(existing) = headers.get_mut(&name) {
+                                existing.push_str(", ");
+                                existing.push_str(&value);
+                            } else {
+                                headers.insert(name, value);
+                            }
+                        }
                         ResponseCommand::SetCookie(name, value, options) => {
-                            _cookies.insert(name, (value, options));
+                            let cookie_str = serialize_cookie(&name, &value, &options);
+                            cookies.push(cookie_str);
                         }
                         ResponseCommand::SetBody(b) => body = Some(b),
                         ResponseCommand::SetRedirect(url, code) => {
                             status = code;
                             headers.insert("Location".into(), url);
                         }
+                        ResponseCommand::SendFile(path, options) => {
+                            match read_file_for_response(&path, options).await {
+                                Ok((file_body, file_headers)) => {
+                                    body = Some(file_body);
+                                    headers.extend(file_headers);
+                                }
+                                Err(e) => {
+                                    eprintln!("Error reading file: {e}");
+                                    status = 404;
+                                    body = Some(Bytes::from_static(b"File Not Found"));
+                                }
+                            }
+                        }
                         ResponseCommand::End => {
                             let mut response = Response::builder().status(status);
                             for (name, value) in &headers {
                                 response = response.header(name, value);
                             }
+
+                            for cookie in &cookies {
+                                response = response.header("Set-Cookie", cookie);
+                            }
+
                             let body_bytes = body.unwrap_or_else(|| Bytes::new());
                             let response = response.body(Full::new(body_bytes)).unwrap();
                             let _ = response_tx.send(response);
@@ -480,4 +608,58 @@ async fn handle_request(
     }
 
     Ok(Response::builder().status(404).body(Full::new(Bytes::from_static(b"Not Found"))).unwrap())
+}
+
+async fn read_file_for_response(
+    path: &str,
+    options: Option<SendFileOptionsCore>,
+) -> Result<(Bytes, HashMap<String, String>), std::io::Error> {
+    let full_path = if let Some(ref opts) = options {
+        if let Some(ref root) = opts.root { format!("{root}/{path}") } else { path.to_string() }
+    } else {
+        path.to_string()
+    };
+
+    let mut file = File::open(&full_path).await?;
+    let metadata = file.metadata().await?;
+    let mut contents = Vec::new();
+    file.read_to_end(&mut contents).await?;
+
+    let mut headers = HashMap::new();
+    headers.insert("Content-Type".to_string(), get_mime_type(path).to_string());
+    headers.insert("Content-Length".to_string(), metadata.len().to_string());
+
+    if let Some(opts) = options {
+        if let Some(ref custom_headers) = opts.headers {
+            headers.extend(custom_headers.clone());
+        }
+
+        if opts.last_modified.unwrap_or(true) {
+            if let Ok(modified) = metadata.modified() {
+                if let Ok(duration) = modified.duration_since(UNIX_EPOCH) {
+                    headers.insert(
+                        "Last-Modified".to_string(),
+                        httpdate::fmt_http_date(UNIX_EPOCH + duration),
+                    );
+                }
+            }
+        }
+
+        if opts.cache_control.unwrap_or(true) {
+            if let Some(max_age) = opts.max_age {
+                let cache_value = if opts.immutable.unwrap_or(false) {
+                    format!("public, max-age={max_age}, immutable")
+                } else {
+                    format!("public, max-age={max_age}")
+                };
+                headers.insert("Cache-Control".to_string(), cache_value);
+            }
+        }
+
+        if opts.accept_ranges.unwrap_or(true) {
+            headers.insert("Accept-Ranges".to_string(), "bytes".to_string());
+        }
+    }
+
+    Ok((Bytes::from(contents), headers))
 }

@@ -9,12 +9,14 @@ import {
   setStatusResponse,
   setHeaderResponse,
   setHeadersResponse,
+  appendHeaderResponse,
   setCookieResponse,
   setSendResponse,
   setJsonResponse,
   setTextResponse,
   setHtmlResponse,
   setRedirectResponse,
+  sendFileResponse,
   endResponse,
 } from "@kitojs/kito-core";
 
@@ -98,12 +100,12 @@ export class ResponseBuilder implements KitoResponse {
     const existing = this._headers.get(key);
 
     if (existing) {
-      const newValue = Array.isArray(existing)
-        ? [...existing.split(", "), value].join(", ")
-        : `${existing}, ${value}`;
-      this.header(field, newValue);
+      const newValue = `${existing}, ${value}`;
+      this._headers.set(key, newValue);
+      appendHeaderResponse(this.builder, field, value);
     } else {
-      this.header(field, value);
+      this._headers.set(key, value);
+      setHeaderResponse(this.builder, field, value);
     }
 
     return this;
@@ -241,16 +243,24 @@ export class ResponseBuilder implements KitoResponse {
 
   download(path: string, filename?: string): void {
     this.checkFinished();
-
+    
     const name = filename || path.split("/").pop() || "download";
     this.attachment(name);
-    this.send(`File download: ${path}`);
+    // biome-ignore lint/suspicious/noExplicitAny: ...
+    sendFileResponse(this.builder, path, undefined as any);
+    endResponse(this.builder);
+
+    this.finished = true;
   }
 
-  sendFile(path: string, _options?: SendFileOptions): void {
+  sendFile(path: string, options?: SendFileOptions): void {
     this.checkFinished();
 
-    this.send(`File: ${path}`);
+    // biome-ignore lint/suspicious/noExplicitAny: ...
+    sendFileResponse(this.builder, path, options as any);
+    endResponse(this.builder);
+
+    this.finished = true;
   }
 
   vary(field: string): KitoResponse {

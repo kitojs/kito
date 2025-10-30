@@ -190,6 +190,7 @@ version = "0.1.0"
 dependencies = [
  "dashmap",
  "http-body-util",
+ "httpdate",
  "hyper",
  "hyper-util",
  "napi",
