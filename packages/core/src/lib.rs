@@ -1,3 +1,4 @@
+use parking_lot::Mutex;
 use std::{
     collections::HashMap, convert::Infallible, net::SocketAddr, path::Path, sync::Arc,
     time::UNIX_EPOCH,
@@ -8,8 +9,9 @@ use once_cell::sync::Lazy;
 
 use http_body_util::{BodyExt, Full};
 use hyper::{
-    Request, Response,
+    Request, Response, StatusCode,
     body::{Bytes, Incoming},
+    header::{HeaderName, HeaderValue},
     server::conn::http1,
     service::service_fn,
 };
@@ -18,10 +20,7 @@ use tokio::{
     fs::File,
     io::AsyncReadExt,
     net::TcpListener,
-    sync::{
-        mpsc::{self, UnboundedSender},
-        oneshot,
-    },
+    sync::oneshot::{self, Sender},
 };
 
 use napi::{
@@ -217,29 +216,113 @@ pub struct SendFileOptionsCore {
     pub immutable: Option<bool>,
 }
 
-pub enum ResponseCommand {
-    SetStatus(u16),
-    SetHeader(String, String),
-    SetHeaders(HashMap<String, String>),
-    AppendHeader(String, String),
-    SetCookie(String, String, CookieOptionsCore),
-    SetBody(Bytes),
-    SetRedirect(String, u16),
-    SendFile(String, Option<SendFileOptionsCore>),
-    End,
+struct ResponseData {
+    status: StatusCode,
+    headers: HashMap<String, String>,
+    cookies: Vec<String>,
+    body: Option<Bytes>,
+}
+
+impl Default for ResponseData {
+    fn default() -> Self {
+        Self { status: StatusCode::OK, headers: HashMap::new(), cookies: Vec::new(), body: None }
+    }
 }
 
 pub struct ResponseBuilderCore {
-    tx: UnboundedSender<ResponseCommand>,
+    data: Mutex<ResponseData>,
+    tx: Mutex<Option<Sender<Response<Full<Bytes>>>>>,
 }
 
 impl ResponseBuilderCore {
-    pub fn new(tx: UnboundedSender<ResponseCommand>) -> Self {
-        Self { tx }
+    pub fn new(tx: Sender<Response<Full<Bytes>>>) -> Self {
+        Self { data: Mutex::new(ResponseData::default()), tx: Mutex::new(Some(tx)) }
     }
 
-    pub fn send_command(&self, cmd: ResponseCommand) {
-        let _ = self.tx.send(cmd);
+    pub fn set_status(&self, status: u16) {
+        let mut data = self.data.lock();
+        data.status = StatusCode::from_u16(status).unwrap_or(StatusCode::OK);
+    }
+
+    pub fn set_header(&self, name: String, value: String) {
+        let mut data = self.data.lock();
+        data.headers.insert(name, value);
+    }
+
+    pub fn set_headers(&self, headers: HashMap<String, String>) {
+        let mut data = self.data.lock();
+        data.headers.extend(headers);
+    }
+
+    pub fn append_header(&self, name: String, value: String) {
+        let mut data = self.data.lock();
+        if let Some(existing) = data.headers.get_mut(&name) {
+            existing.push_str(", ");
+            existing.push_str(&value);
+        } else {
+            data.headers.insert(name, value);
+        }
+    }
+
+    pub fn set_cookie(&self, name: String, value: String, options: CookieOptionsCore) {
+        let mut data = self.data.lock();
+        let cookie_str = serialize_cookie(&name, &value, &options);
+        data.cookies.push(cookie_str);
+    }
+
+    pub fn set_body(&self, body: Bytes) {
+        let mut data = self.data.lock();
+        data.body = Some(body);
+    }
+
+    pub fn set_redirect(&self, url: String, code: u16) {
+        let mut data = self.data.lock();
+
+        data.status = StatusCode::from_u16(code).unwrap_or(StatusCode::FOUND);
+        data.headers.insert("Location".to_string(), url);
+    }
+
+    pub async fn send_file(&self, path: String, options: Option<SendFileOptionsCore>) {
+        match read_file_for_response(&path, options).await {
+            Ok((file_body, file_headers)) => {
+                let mut data = self.data.lock();
+                data.body = Some(file_body);
+                data.headers.extend(file_headers);
+            }
+            Err(e) => {
+                eprintln!("Error reading file: {e}");
+                let mut data = self.data.lock();
+                data.status = StatusCode::NOT_FOUND;
+                data.body = Some(Bytes::from_static(b"File Not Found"));
+            }
+        }
+    }
+
+    pub fn end(&self) {
+        let data = self.data.lock();
+        let mut response = Response::builder().status(data.status);
+
+        for (name, value) in &data.headers {
+            if let (Ok(header_name), Ok(header_value)) =
+                (HeaderName::try_from(name.as_str()), HeaderValue::try_from(value.as_str()))
+            {
+                response = response.header(header_name, header_value);
+            }
+        }
+
+        for cookie in &data.cookies {
+            if let Ok(cookie_value) = HeaderValue::try_from(cookie.as_str()) {
+                response = response.header("Set-Cookie", cookie_value);
+            }
+        }
+
+        let body = data.body.clone().unwrap_or_else(|| Bytes::new());
+        let response = response.body(Full::new(body)).unwrap();
+
+        let mut tx_guard = self.tx.lock();
+        if let Some(tx) = tx_guard.take() {
+            let _ = tx.send(response);
+        }
     }
 }
 
@@ -260,7 +343,7 @@ impl ToNapiValue for ContextObject {
 
 #[napi]
 pub fn set_status_response(builder: &External<Arc<ResponseBuilderCore>>, status: u16) {
-    builder.send_command(ResponseCommand::SetStatus(status));
+    builder.set_status(status);
 }
 
 #[napi]
@@ -269,7 +352,7 @@ pub fn set_header_response(
     name: String,
     value: String,
 ) {
-    builder.send_command(ResponseCommand::SetHeader(name, value));
+    builder.set_header(name, value);
 }
 
 #[napi]
@@ -277,7 +360,7 @@ pub fn set_headers_response(
     builder: &External<Arc<ResponseBuilderCore>>,
     headers: HashMap<String, String>,
 ) {
-    builder.send_command(ResponseCommand::SetHeaders(headers));
+    builder.set_headers(headers);
 }
 
 #[napi]
@@ -286,7 +369,7 @@ pub fn append_header_response(
     name: String,
     value: String,
 ) {
-    builder.send_command(ResponseCommand::AppendHeader(name, value));
+    builder.append_header(name, value);
 }
 
 #[napi]
@@ -296,31 +379,31 @@ pub fn set_cookie_response(
     value: String,
     options: Option<CookieOptionsCore>,
 ) {
-    builder.send_command(ResponseCommand::SetCookie(name, value, options.unwrap_or_default()));
+    builder.set_cookie(name, value, options.unwrap_or_default());
 }
 
 #[napi]
 pub fn set_text_response(builder: &External<Arc<ResponseBuilderCore>>, data: String) {
-    builder.send_command(ResponseCommand::SetBody(Bytes::from(data)));
+    builder.set_body(Bytes::from(data));
 }
 
 #[napi]
 pub fn set_html_response(builder: &External<Arc<ResponseBuilderCore>>, data: String) {
-    builder.send_command(ResponseCommand::SetBody(Bytes::from(data)));
+    builder.set_body(Bytes::from(data));
 }
 
 #[napi]
 pub fn set_json_response(builder: &External<Arc<ResponseBuilderCore>>, data: Unknown<'_>) {
     let json_str = data.coerce_to_string().unwrap();
     let json_bytes = json_str.into_utf8().unwrap().into_owned().unwrap();
-    builder.send_command(ResponseCommand::SetBody(Bytes::from(json_bytes)));
+    builder.set_body(Bytes::from(json_bytes));
 }
 
 #[napi]
 pub fn set_send_response(builder: &External<Arc<ResponseBuilderCore>>, data: Unknown<'_>) {
     let val = data.coerce_to_string().unwrap();
     let val_bytes = val.into_utf8().unwrap().into_owned().unwrap();
-    builder.send_command(ResponseCommand::SetBody(Bytes::from(val_bytes)));
+    builder.set_body(Bytes::from(val_bytes));
 }
 
 #[napi]
@@ -329,7 +412,7 @@ pub fn set_redirect_response(
     url: String,
     code: Option<u16>,
 ) {
-    builder.send_command(ResponseCommand::SetRedirect(url, code.unwrap_or(302)));
+    builder.set_redirect(url, code.unwrap_or(302));
 }
 
 #[napi]
@@ -338,12 +421,15 @@ pub fn send_file_response(
     path: String,
     options: Option<SendFileOptionsCore>,
 ) {
-    builder.send_command(ResponseCommand::SendFile(path, options));
+    let builder = (**builder).clone();
+    tokio::spawn(async move {
+        builder.send_file(path, options).await;
+    });
 }
 
 #[napi]
 pub fn end_response(builder: &External<Arc<ResponseBuilderCore>>) {
-    builder.send_command(ResponseCommand::End);
+    builder.end();
 }
 
 #[napi]
@@ -525,79 +611,13 @@ async fn handle_request(
                     }
                 };
 
-            let (tx, mut rx) = mpsc::unbounded_channel();
             let (response_tx, response_rx) = oneshot::channel();
 
-            let res_builder = Arc::new(ResponseBuilderCore::new(tx));
+            let res_builder = Arc::new(ResponseBuilderCore::new(response_tx));
             let res_external = External::new(res_builder);
             let ctx_obj = ContextObject { req: req_data, res: res_external };
 
             let _ = route.handler.call(ctx_obj, ThreadsafeFunctionCallMode::NonBlocking);
-
-            tokio::spawn(async move {
-                let mut status = 200u16;
-                let mut headers = HashMap::with_capacity(8);
-                let mut body: Option<Bytes> = None;
-                let mut cookies: Vec<String> = Vec::new();
-
-                while let Some(cmd) = rx.recv().await {
-                    match cmd {
-                        ResponseCommand::SetStatus(s) => status = s,
-                        ResponseCommand::SetHeader(name, value) => {
-                            headers.insert(name, value);
-                        }
-                        ResponseCommand::SetHeaders(h) => {
-                            headers.reserve(h.len());
-                            headers.extend(h);
-                        }
-                        ResponseCommand::AppendHeader(name, value) => {
-                            if let Some(existing) = headers.get_mut(&name) {
-                                existing.push_str(", ");
-                                existing.push_str(&value);
-                            } else {
-                                headers.insert(name, value);
-                            }
-                        }
-                        ResponseCommand::SetCookie(name, value, options) => {
-                            let cookie_str = serialize_cookie(&name, &value, &options);
-                            cookies.push(cookie_str);
-                        }
-                        ResponseCommand::SetBody(b) => body = Some(b),
-                        ResponseCommand::SetRedirect(url, code) => {
-                            status = code;
-                            headers.insert("Location".into(), url);
-                        }
-                        ResponseCommand::SendFile(path, options) => {
-                            match read_file_for_response(&path, options).await {
-                                Ok((file_body, file_headers)) => {
-                                    body = Some(file_body);
-                                    headers.extend(file_headers);
-                                }
-                                Err(e) => {
-                                    eprintln!("Error reading file: {e}");
-                                    status = 404;
-                                    body = Some(Bytes::from_static(b"File Not Found"));
-                                }
-                            }
-                        }
-                        ResponseCommand::End => {
-                            let mut response = Response::builder().status(status);
-                            for (name, value) in &headers {
-                                response = response.header(name, value);
-                            }
-
-                            for cookie in &cookies {
-                                response = response.header("Set-Cookie", cookie);
-                            }
-
-                            let body_bytes = body.unwrap_or_else(|| Bytes::new());
-                            let response = response.body(Full::new(body_bytes)).unwrap();
-                            let _ = response_tx.send(response);
-                            break;
-                        }
-                    }
-                }
-            });
 
             if let Ok(response) = response_rx.await {
                 return Ok(response);
