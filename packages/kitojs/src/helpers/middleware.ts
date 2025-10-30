@@ -1,7 +1,9 @@
 import type { MiddlewareDefinition, MiddlewareHandler } from "@kitojs/types";
 
-export function middleware<TSchema = unknown>(
-  handler: MiddlewareHandler<TSchema>,
+// biome-ignore lint/suspicious/noExplicitAny: ...
+export function middleware<TExtensions = any>(
+  // biome-ignore lint/suspicious/noExplicitAny: ...
+  handler: MiddlewareHandler<any, TExtensions>,
 ): MiddlewareDefinition {
   return {
     type: "function",

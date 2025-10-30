@@ -12,11 +12,14 @@ import type {
 import { ServerCore } from "@kitojs/kito-core";
 import { ResponseBuilder } from "./response";
 
-export class KitoServer {
+// biome-ignore lint/complexity/noBannedTypes: ...
+export class KitoServer<TExtensions = {}> {
   private globalMiddlewares: MiddlewareDefinition[] = [];
   private serverOptions: ServerOptions = {};
 
   private coreServer: ServerCore;
+  // biome-ignore lint/suspicious/noExplicitAny: ...
+  private extensionFn?: (ctx: any) => void;
 
   constructor(options?: ServerOptions) {
     this.serverOptions = { ...this.serverOptions, ...options };
@@ -25,6 +28,36 @@ export class KitoServer {
       host: "0.0.0.0",
       ...options,
     });
+  }
+
+  extend<TNewExtensions = unknown>(
+    fn: (
+      ctx: KitoContext & TExtensions & Partial<TNewExtensions>,
+      // biome-ignore lint/suspicious/noConfusingVoidType: ...
+    ) => TNewExtensions | void,
+  ): KitoServer<TExtensions & TNewExtensions> {
+    const newServer = new KitoServer<TExtensions & TNewExtensions>(
+      this.serverOptions,
+    );
+
+    newServer.globalMiddlewares = [...this.globalMiddlewares];
+
+    newServer.coreServer = this.coreServer;
+
+    const previousExtensionFn = this.extensionFn;
+    // biome-ignore lint/suspicious/noExplicitAny: ...
+    newServer.extensionFn = (ctx: any) => {
+      if (previousExtensionFn) {
+        previousExtensionFn(ctx);
+      }
+
+      const result = fn(ctx);
+      if (result && typeof result === "object") {
+        Object.assign(ctx, result);
+      }
+    };
+
+    return newServer;
   }
 
   use(middleware: MiddlewareDefinition | MiddlewareHandler): void {
@@ -45,21 +78,21 @@ export class KitoServer {
   // biome-ignore lint/complexity/noBannedTypes: ...
   get<TSchema extends SchemaDefinition = {}>(
     path: string,
-    handler: RouteHandler<TSchema>,
+    handler: RouteHandler<TSchema, TExtensions>,
   ): void;
   // biome-ignore lint/complexity/noBannedTypes: ...
   get<TSchema extends SchemaDefinition = {}>(
     path: string,
     middlewares: (MiddlewareDefinition | TSchema)[],
-    handler: RouteHandler<TSchema>,
+    handler: RouteHandler<TSchema, TExtensions>,
   ): void;
   // biome-ignore lint/complexity/noBannedTypes: ...
   get<TSchema extends SchemaDefinition = {}>(
     path: string,
     middlewaresOrHandler:
       | (MiddlewareDefinition | TSchema)[]
-      | RouteHandler<TSchema>,
-    handler?: RouteHandler<TSchema>,
+      | RouteHandler<TSchema, TExtensions>,
+    handler?: RouteHandler<TSchema, TExtensions>,
   ): void {
     this.addRoute<TSchema>("GET", path, middlewaresOrHandler, handler);
   }
@@ -67,21 +100,21 @@ export class KitoServer {
   // biome-ignore lint/complexity/noBannedTypes: ...
   post<TSchema extends SchemaDefinition = {}>(
     path: string,
-    handler: RouteHandler<TSchema>,
+    handler: RouteHandler<TSchema, TExtensions>,
   ): void;
   // biome-ignore lint/complexity/noBannedTypes: ...
   post<TSchema extends SchemaDefinition = {}>(
     path: string,
     middlewares: (MiddlewareDefinition | TSchema)[],
-    handler: RouteHandler<TSchema>,
+    handler: RouteHandler<TSchema, TExtensions>,
   ): void;
   // biome-ignore lint/complexity/noBannedTypes: ...
   post<TSchema extends SchemaDefinition = {}>(
     path: string,
     middlewaresOrHandler:
       | (MiddlewareDefinition | TSchema)[]
-      | RouteHandler<TSchema>,
-    handler?: RouteHandler<TSchema>,
+      | RouteHandler<TSchema, TExtensions>,
+    handler?: RouteHandler<TSchema, TExtensions>,
   ): void {
     this.addRoute<TSchema>("POST", path, middlewaresOrHandler, handler);
   }
@@ -89,21 +122,21 @@ export class KitoServer {
   // biome-ignore lint/complexity/noBannedTypes: ...
   put<TSchema extends SchemaDefinition = {}>(
     path: string,
-    handler: RouteHandler<TSchema>,
+    handler: RouteHandler<TSchema, TExtensions>,
   ): void;
   // biome-ignore lint/complexity/noBannedTypes: ...
   put<TSchema extends SchemaDefinition = {}>(
     path: string,
     middlewares: (MiddlewareDefinition | TSchema)[],
-    handler: RouteHandler<TSchema>,
+    handler: RouteHandler<TSchema, TExtensions>,
   ): void;
   // biome-ignore lint/complexity/noBannedTypes: ...
   put<TSchema extends SchemaDefinition = {}>(
     path: string,
     middlewaresOrHandler:
       | (MiddlewareDefinition | TSchema)[]
-      | RouteHandler<TSchema>,
-    handler?: RouteHandler<TSchema>,
+      | RouteHandler<TSchema, TExtensions>,
+    handler?: RouteHandler<TSchema, TExtensions>,
   ): void {
     this.addRoute<TSchema>("PUT", path, middlewaresOrHandler, handler);
   }
@@ -111,21 +144,21 @@ export class KitoServer {
   // biome-ignore lint/complexity/noBannedTypes: ...
   delete<TSchema extends SchemaDefinition = {}>(
     path: string,
-    handler: RouteHandler<TSchema>,
+    handler: RouteHandler<TSchema, TExtensions>,
   ): void;
   // biome-ignore lint/complexity/noBannedTypes: ...
   delete<TSchema extends SchemaDefinition = {}>(
     path: string,
     middlewares: (MiddlewareDefinition | TSchema)[],
-    handler: RouteHandler<TSchema>,
+    handler: RouteHandler<TSchema, TExtensions>,
   ): void;
   // biome-ignore lint/complexity/noBannedTypes: ...
   delete<TSchema extends SchemaDefinition = {}>(
     path: string,
     middlewaresOrHandler:
       | (MiddlewareDefinition | TSchema)[]
-      | RouteHandler<TSchema>,
-    handler?: RouteHandler<TSchema>,
+      | RouteHandler<TSchema, TExtensions>,
+    handler?: RouteHandler<TSchema, TExtensions>,
   ): void {
     this.addRoute<TSchema>("DELETE", path, middlewaresOrHandler, handler);
   }
@@ -133,21 +166,21 @@ export class KitoServer {
   // biome-ignore lint/complexity/noBannedTypes: ...
   patch<TSchema extends SchemaDefinition = {}>(
     path: string,
-    handler: RouteHandler<TSchema>,
+    handler: RouteHandler<TSchema, TExtensions>,
   ): void;
   // biome-ignore lint/complexity/noBannedTypes: ...
   patch<TSchema extends SchemaDefinition = {}>(
     path: string,
     middlewares: (MiddlewareDefinition | TSchema)[],
-    handler: RouteHandler<TSchema>,
+    handler: RouteHandler<TSchema, TExtensions>,
   ): void;
   // biome-ignore lint/complexity/noBannedTypes: ...
   patch<TSchema extends SchemaDefinition = {}>(
     path: string,
     middlewaresOrHandler:
       | (MiddlewareDefinition | TSchema)[]
-      | RouteHandler<TSchema>,
-    handler?: RouteHandler<TSchema>,
+      | RouteHandler<TSchema, TExtensions>,
+    handler?: RouteHandler<TSchema, TExtensions>,
   ): void {
     this.addRoute<TSchema>("PATCH", path, middlewaresOrHandler, handler);
   }
@@ -155,21 +188,21 @@ export class KitoServer {
   // biome-ignore lint/complexity/noBannedTypes: ...
   head<TSchema extends SchemaDefinition = {}>(
     path: string,
-    handler: RouteHandler<TSchema>,
+    handler: RouteHandler<TSchema, TExtensions>,
   ): void;
   // biome-ignore lint/complexity/noBannedTypes: ...
   head<TSchema extends SchemaDefinition = {}>(
     path: string,
     middlewares: (MiddlewareDefinition | TSchema)[],
-    handler: RouteHandler<TSchema>,
+    handler: RouteHandler<TSchema, TExtensions>,
   ): void;
   // biome-ignore lint/complexity/noBannedTypes: ...
   head<TSchema extends SchemaDefinition = {}>(
     path: string,
     middlewaresOrHandler:
       | (MiddlewareDefinition | TSchema)[]
-      | RouteHandler<TSchema>,
-    handler?: RouteHandler<TSchema>,
+      | RouteHandler<TSchema, TExtensions>,
+    handler?: RouteHandler<TSchema, TExtensions>,
   ): void {
     this.addRoute<TSchema>("HEAD", path, middlewaresOrHandler, handler);
   }
@@ -177,21 +210,21 @@ export class KitoServer {
   // biome-ignore lint/complexity/noBannedTypes: ...
   options<TSchema extends SchemaDefinition = {}>(
     path: string,
-    handler: RouteHandler<TSchema>,
+    handler: RouteHandler<TSchema, TExtensions>,
   ): void;
   // biome-ignore lint/complexity/noBannedTypes: ...
   options<TSchema extends SchemaDefinition = {}>(
     path: string,
     middlewares: (MiddlewareDefinition | TSchema)[],
-    handler: RouteHandler<TSchema>,
+    handler: RouteHandler<TSchema, TExtensions>,
   ): void;
   // biome-ignore lint/complexity/noBannedTypes: ...
   options<TSchema extends SchemaDefinition = {}>(
     path: string,
     middlewaresOrHandler:
       | (MiddlewareDefinition | TSchema)[]
-      | RouteHandler<TSchema>,
-    handler?: RouteHandler<TSchema>,
+      | RouteHandler<TSchema, TExtensions>,
+    handler?: RouteHandler<TSchema, TExtensions>,
   ): void {
     this.addRoute<TSchema>("OPTIONS", path, middlewaresOrHandler, handler);
   }
@@ -202,14 +235,14 @@ export class KitoServer {
     path: string,
     middlewaresOrHandler:
       | (MiddlewareDefinition | TSchema)[]
-      | RouteHandler<TSchema>,
-    handler?: RouteHandler<TSchema>,
+      | RouteHandler<TSchema, TExtensions>,
+    handler?: RouteHandler<TSchema, TExtensions>,
   ): void {
-    let finalHandler: RouteHandler<TSchema>;
+    let finalHandler: RouteHandler<TSchema, TExtensions>;
     let middlewares: (MiddlewareDefinition | TSchema)[] = [];
 
     if (typeof middlewaresOrHandler === "function") {
-      finalHandler = middlewaresOrHandler as RouteHandler<TSchema>;
+      finalHandler = middlewaresOrHandler as RouteHandler<TSchema, TExtensions>;
     } else {
       middlewares = middlewaresOrHandler as (MiddlewareDefinition | TSchema)[];
       // biome-ignore lint/style/noNonNullAssertion: ...
@@ -244,7 +277,13 @@ export class KitoServer {
 
     const routeHandler = async (ctx: KitoContext<TSchema>) => {
       const resBuilder = new ResponseBuilder(ctx.res);
-      const context = { ...ctx, res: resBuilder };
+      // biome-ignore lint/suspicious/noExplicitAny: ...
+      const context: any = ctx;
+      context.res = resBuilder;
+
+      if (this.extensionFn) {
+        this.extensionFn(context);
+      }
 
       await fusedHandler(context);
     };
@@ -259,11 +298,11 @@ export class KitoServer {
     this.coreServer.addRoute(rd);
   }
 
-  private fuseMiddlewares<TSchema>(
+  private fuseMiddlewares<TSchema extends SchemaDefinition>(
     globals: MiddlewareDefinition[],
     routeMiddlewares: MiddlewareDefinition[],
-    handler: RouteHandler<TSchema>,
-  ): RouteHandler<TSchema> {
+    handler: RouteHandler<TSchema, TExtensions>,
+  ): RouteHandler<TSchema, TExtensions> {
     const functions = [
       ...globals
         .filter((m) => m.type === "function" && m.handler)
@@ -275,7 +314,8 @@ export class KitoServer {
         .map((m) => m.handler!),
     ];
 
-    if (functions.length === 0) return handler;
+    if (functions.length === 0)
+      return handler as RouteHandler<TSchema, TExtensions>;
 
     // biome-ignore lint/suspicious/noExplicitAny: ...
     return async (ctx: any) => {
@@ -315,6 +355,7 @@ export class KitoServer {
   }
 }
 
-export function server(options?: ServerOptions): KitoServer {
+// biome-ignore lint/complexity/noBannedTypes: ...
+export function server(options?: ServerOptions): KitoServer<{}> {
   return new KitoServer(options);
 }
