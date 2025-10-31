@@ -11,10 +11,8 @@ import {
   setHeadersResponse,
   appendHeaderResponse,
   setCookieResponse,
-  setSendResponse,
-  setJsonResponse,
-  setTextResponse,
-  setHtmlResponse,
+  setBodyBytes,
+  setBodyString,
   setRedirectResponse,
   sendFileResponse,
   endResponse,
@@ -69,7 +67,7 @@ export class ResponseBuilder implements KitoResponse {
 
     const message = HTTP_STATUS_MESSAGES[code] || "Unknown";
     setStatusResponse(this.builder, code);
-    setTextResponse(this.builder, message);
+    setBodyString(this.builder, message);
     endResponse(this.builder);
 
     this.finished = true;
@@ -161,11 +159,7 @@ export class ResponseBuilder implements KitoResponse {
   clearCookie(name: string, options?: CookieOptions): KitoResponse {
     this.checkFinished();
 
-    const clearOptions = {
-      ...options,
-      maxAge: 0,
-      expires: new Date(0),
-    };
+    const clearOptions = { ...options, maxAge: 0, expires: new Date(0) };
     // biome-ignore lint/suspicious/noExplicitAny: ...
     setCookieResponse(this.builder, name, "", clearOptions as any);
     return this;
@@ -175,8 +169,13 @@ export class ResponseBuilder implements KitoResponse {
 
   send(data: unknown): void {
     this.checkFinished();
-
-    setSendResponse(this.builder, data);
+    if (Buffer.isBuffer(data)) {
+      setBodyBytes(this.builder, data);
+    } else if (typeof data === "string") {
+      setBodyString(this.builder, data);
+    } else {
+      setBodyString(this.builder, String(data));
+    }
     endResponse(this.builder);
 
     this.finished = true;
@@ -186,7 +185,8 @@ export class ResponseBuilder implements KitoResponse {
     this.checkFinished();
 
     this.type("application/json");
-    setJsonResponse(this.builder, JSON.stringify(data));
+    const jsonStr = JSON.stringify(data);
+    setBodyString(this.builder, jsonStr);
     endResponse(this.builder);
 
     this.finished = true;
@@ -196,7 +196,7 @@ export class ResponseBuilder implements KitoResponse {
     this.checkFinished();
 
     this.type("text/plain");
-    setTextResponse(this.builder, data);
+    setBodyString(this.builder, data);
     endResponse(this.builder);
 
     this.finished = true;
@@ -206,7 +206,7 @@ export class ResponseBuilder implements KitoResponse {
     this.checkFinished();
 
     this.type("text/html");
-    setHtmlResponse(this.builder, data);
+    setBodyString(this.builder, data);
     endResponse(this.builder);
 
     this.finished = true;
@@ -243,7 +243,7 @@ export class ResponseBuilder implements KitoResponse {
 
   download(path: string, filename?: string): void {
     this.checkFinished();
-    
+
     const name = filename || path.split("/").pop() || "download";
     this.attachment(name);
     // biome-ignore lint/suspicious/noExplicitAny: ...
@@ -295,7 +295,7 @@ export class ResponseBuilder implements KitoResponse {
     if (firstHandler) {
       firstHandler();
     }
-
+    
     return this;
   }
 }

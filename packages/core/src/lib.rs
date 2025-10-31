@@ -24,8 +24,8 @@ use tokio::{
 };
 
 use napi::{
-    Env, JsValue, Unknown,
-    bindgen_prelude::{External, Function, Object, ToNapiValue},
+    Env,
+    bindgen_prelude::{Buffer, External, Function, Object, ToNapiValue},
     sys,
     threadsafe_function::{ThreadsafeFunction, ThreadsafeFunctionCallMode},
 };
@@ -70,28 +70,27 @@ pub struct Route {
     pub handler: Function<'static, ContextObject, ()>,
 }
 
-#[derive(Clone)]
-#[napi(object)]
-pub struct RequestData {
-    pub method: String,
-    pub url: String,
-    pub headers: HashMap<String, String>,
-    pub params: HashMap<String, String>,
-    pub query: HashMap<String, Vec<String>>,
-    pub body: Vec<u8>,
-    pub pathname: String,
-    pub search: Option<String>,
-    pub protocol: String,
-    pub hostname: String,
-    pub cookies: HashMap<String, String>,
-    pub ip: String,
-    pub ips: Vec<String>,
-    pub original_url: String,
-    pub secure: bool,
-    pub xhr: bool,
+pub struct RequestCore {
+    method: String,
+    url: String,
+    pathname: String,
+    search: Option<String>,
+    protocol: String,
+    hostname: String,
+    original_url: String,
+    secure: bool,
+    xhr: bool,
+    ip: String,
+    ips: Vec<String>,
+
+    body: Bytes,
+    headers_raw: HashMap<String, String>,
+    params: HashMap<String, String>,
+    query_raw: HashMap<String, Vec<String>>,
+    cookies_raw: HashMap<String, String>,
 }
 
-impl RequestData {
+impl RequestCore {
     pub async fn new(
         req: Request<Incoming>,
         remote_addr: Option<SocketAddr>,
@@ -104,30 +103,30 @@ impl RequestData {
         let search = uri.query().map(|q| format!("?{q}"));
         let original_url = url.clone();
 
-        let mut headers = HashMap::with_capacity(req.headers().len());
+        let mut headers_raw = HashMap::with_capacity(req.headers().len());
         for (name, value) in req.headers() {
             if let Ok(v) = value.to_str() {
-                headers.insert(name.as_str().to_string(), v.to_string());
+                headers_raw.insert(name.as_str().to_string(), v.to_string());
             }
         }
 
-        let mut query: HashMap<String, Vec<String>> = HashMap::new();
+        let mut query_raw: HashMap<String, Vec<String>> = HashMap::new();
         if let Some(q) = uri.query() {
             for pair in q.split('&') {
                 if let Some((key, value)) = pair.split_once('=') {
                     let decoded_key = urlencoding::decode(key).unwrap_or_default().into_owned();
                     let decoded_value = urlencoding::decode(value).unwrap_or_default().into_owned();
-                    query.entry(decoded_key).or_insert_with(Vec::new).push(decoded_value);
+                    query_raw.entry(decoded_key).or_insert_with(Vec::new).push(decoded_value);
                 }
             }
         }
 
         let scheme = req.uri().scheme_str().unwrap_or("http").to_string();
 
-        let body_bytes = req.into_body().collect().await?.to_bytes().to_vec();
+        let body = req.into_body().collect().await?.to_bytes();
 
         let protocol = if trust_proxy {
-            headers
+            headers_raw
                 .get("x-forwarded-proto")
                 .map(|s| s.to_string())
                 .unwrap_or_else(|| "http".to_string())
@@ -136,10 +135,9 @@ impl RequestData {
         };
 
         let secure = protocol.eq_ignore_ascii_case("https");
+        let hostname = headers_raw.get("host").cloned().unwrap_or_else(|| "localhost".to_string());
 
-        let hostname = headers.get("host").cloned().unwrap_or_else(|| "localhost".to_string());
-
-        let cookies = headers.get("cookie").map_or(HashMap::new(), |cookie_str| {
+        let cookies_raw = headers_raw.get("cookie").map_or(HashMap::new(), |cookie_str| {
             cookie_str
                 .split(';')
                 .filter_map(|c| {
@@ -154,7 +152,7 @@ impl RequestData {
         });
 
         let ips: Vec<String> = if trust_proxy {
-            headers
+            headers_raw
                 .get("x-forwarded-for")
                 .map(|s| s.split(',').map(|ip| ip.trim().to_string()).collect())
                 .unwrap_or_default()
@@ -168,27 +166,123 @@ impl RequestData {
             .or_else(|| remote_addr.map(|a| a.ip().to_string()))
             .unwrap_or_default();
 
-        let xhr = headers.get("x-requested-with").map(|v| v == "XMLHttpRequest").unwrap_or(false);
+        let xhr =
+            headers_raw.get("x-requested-with").map(|v| v == "XMLHttpRequest").unwrap_or(false);
 
         Ok(Self {
             method,
             url,
-            headers,
-            params: HashMap::new(),
-            query,
-            body: body_bytes,
             pathname,
             search,
             protocol,
             hostname,
-            cookies,
-            ip,
-            ips,
             original_url,
             secure,
             xhr,
+            ip,
+            ips,
+            body,
+            headers_raw,
+            params: HashMap::new(),
+            query_raw,
+            cookies_raw,
         })
     }
+}
+
+#[napi]
+pub fn get_body_buffer(core: &External<Arc<RequestCore>>) -> Buffer {
+    Buffer::from(core.body.as_ref())
+}
+
+#[napi]
+pub fn get_header(core: &External<Arc<RequestCore>>, name: String) -> Option<String> {
+    core.headers_raw.get(&name.to_lowercase()).cloned()
+}
+
+#[napi]
+pub fn get_all_headers(core: &External<Arc<RequestCore>>) -> HashMap<String, String> {
+    core.headers_raw.clone()
+}
+
+#[napi]
+pub fn get_query_param(core: &External<Arc<RequestCore>>, name: String) -> Option<Vec<String>> {
+    core.query_raw.get(&name).cloned()
+}
+
+#[napi]
+pub fn get_all_query(core: &External<Arc<RequestCore>>) -> HashMap<String, Vec<String>> {
+    core.query_raw.clone()
+}
+
+#[napi]
+pub fn get_param(core: &External<Arc<RequestCore>>, name: String) -> Option<String> {
+    core.params.get(&name).cloned()
+}
+
+#[napi]
+pub fn get_all_params(core: &External<Arc<RequestCore>>) -> HashMap<String, String> {
+    core.params.clone()
+}
+
+#[napi]
+pub fn get_cookie(core: &External<Arc<RequestCore>>, name: String) -> Option<String> {
+    core.cookies_raw.get(&name).cloned()
+}
+
+#[napi]
+pub fn get_all_cookies(core: &External<Arc<RequestCore>>) -> HashMap<String, String> {
+    core.cookies_raw.clone()
+}
+
+#[napi]
+pub fn get_method(core: &External<Arc<RequestCore>>) -> String {
+    core.method.clone()
+}
+
+#[napi]
+pub fn get_url(core: &External<Arc<RequestCore>>) -> String {
+    core.url.clone()
+}
+
+#[napi]
+pub fn get_pathname(core: &External<Arc<RequestCore>>) -> String {
+    core.pathname.clone()
+}
+
+#[napi]
+pub fn get_search(core: &External<Arc<RequestCore>>) -> Option<String> {
+    core.search.clone()
+}
+
+#[napi]
+pub fn get_protocol(core: &External<Arc<RequestCore>>) -> String {
+    core.protocol.clone()
+}
+
+#[napi]
+pub fn get_hostname(core: &External<Arc<RequestCore>>) -> String {
+    core.hostname.clone()
+}
+
+#[napi]
+pub fn get_ip(core: &External<Arc<RequestCore>>) -> String {
+    core.ip.clone()
+}
+
+#[napi]
+pub fn get_ips(core: &External<Arc<RequestCore>>) -> Vec<String> {
+    core.ips.clone()
+}
+
+#[napi]
+pub fn get_secure(core: &External<Arc<RequestCore>>) -> bool {
+    core.secure
+}
+
+#[napi]
+pub fn get_xhr(core: &External<Arc<RequestCore>>) -> bool {
+    core.xhr
 }
 
 #[derive(Clone, Default)]
@@ -327,7 +421,7 @@ impl ResponseBuilderCore {
 }
 
 pub struct ContextObject {
-    pub req: RequestData,
+    pub req: External<Arc<RequestCore>>,
     pub res: External<Arc<ResponseBuilderCore>>,
 }
 
@@ -383,27 +477,13 @@ pub fn set_cookie_response(
 }
 
 #[napi]
-pub fn set_text_response(builder: &External<Arc<ResponseBuilderCore>>, data: String) {
+pub fn set_body_bytes(builder: &External<Arc<ResponseBuilderCore>>, data: Buffer) {
+    builder.set_body(Bytes::from(data.as_ref().to_vec()));
+}
+
+#[napi]
+pub fn set_body_string(builder: &External<Arc<ResponseBuilderCore>>, data: String) {
     builder.set_body(Bytes::from(data));
-}
-
-#[napi]
-pub fn set_html_response(builder: &External<Arc<ResponseBuilderCore>>, data: String) {
-    builder.set_body(Bytes::from(data));
-}
-
-#[napi]
-pub fn set_json_response(builder: &External<Arc<ResponseBuilderCore>>, data: Unknown<'_>) {
-    let json_str = data.coerce_to_string().unwrap();
-    let json_bytes = json_str.into_utf8().unwrap().into_owned().unwrap();
-    builder.set_body(Bytes::from(json_bytes));
-}
-
-#[napi]
-pub fn set_send_response(builder: &External<Arc<ResponseBuilderCore>>, data: Unknown<'_>) {
-    let val = data.coerce_to_string().unwrap();
-    let val_bytes = val.into_utf8().unwrap().into_owned().unwrap();
-    builder.set_body(Bytes::from(val_bytes));
 }
 
 #[napi]
@@ -594,16 +674,13 @@ async fn handle_request(
                 }
             }
 
-            let req_data =
-                match RequestData::new(req, Some(remote_addr), config.trust_proxy.unwrap_or(false))
+            let mut req_core =
+                match RequestCore::new(req, Some(remote_addr), config.trust_proxy.unwrap_or(false))
                     .await
                 {
-                    Ok(mut data) => {
-                        data.params = params;
-                        data
-                    }
+                    Ok(core) => core,
                     Err(e) => {
-                        eprintln!("Error reading request body: {e}");
+                        eprintln!("Error creating request: {e}");
                         return Ok(Response::builder()
                             .status(400)
                             .body(Full::new(Bytes::from_static(b"Bad Request")))
@@ -611,11 +688,16 @@ async fn handle_request(
                     }
                 };
 
+            req_core.params = params;
+
             let (response_tx, response_rx) = oneshot::channel();
 
             let res_builder = Arc::new(ResponseBuilderCore::new(response_tx));
             let res_external = External::new(res_builder);
-            let ctx_obj = ContextObject { req: req_data, res: res_external };
+
+            let req_external = External::new(Arc::new(req_core));
+
+            let ctx_obj = ContextObject { req: req_external, res: res_external };
 
             let _ = route.handler.call(ctx_obj, ThreadsafeFunctionCallMode::NonBlocking);
 

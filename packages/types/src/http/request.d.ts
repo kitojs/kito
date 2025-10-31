@@ -9,27 +9,34 @@ export interface ParsedUrl {
 }
 
 export interface KitoRequest {
-  method: string;
-  url: string;
-  headers: RequestHeaders;
-  params: Record<string, string>;
-  query: Record<string, string | string[]>;
-  body: unknown;
+  get method(): string;
+  get url(): string;
+  get headers(): Record<string, string>;
+  get body(): unknown;
+  get params(): Record<string, string>;
+  get query(): Record<string, string | string[]>;
+  get cookies(): Record<string, string>;
+  get pathname(): string;
+  get search(): string | null;
+  get protocol(): string;
+  get hostname(): string;
+  get ip(): string;
+  get ips(): string[];
+  get secure(): boolean;
+  get xhr(): boolean;
+  get originalUrl(): string;
 
-  pathname: string;
-  search: string | null;
-  protocol: string;
-  hostname: string;
-  cookies: Record<string, string>;
-  ip: string;
-  ips: string[];
-  originalUrl: string;
-  secure: boolean;
-  xhr: boolean;
+  header(name: string): string | undefined;
+  queryParam(name: string): string | string[] | undefined;
+  param(name: string): string | undefined;
+  cookie(name: string): string | undefined;
 
-  raw: {
+  json<T = unknown>(): T;
+  text(): string;
+
+  get raw(): {
     body: Buffer;
-    headers: RequestHeaders;
+    headers: Record<string, string>;
     url: string;
     method: string;
   };

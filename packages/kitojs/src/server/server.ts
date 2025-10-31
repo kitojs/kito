@@ -10,6 +10,7 @@ import type {
 } from "@kitojs/types";
 
 import { ServerCore } from "@kitojs/kito-core";
+import { RequestBuilder } from "./request";
 import { ResponseBuilder } from "./response";
 
 // biome-ignore lint/complexity/noBannedTypes: ...
@@ -68,10 +69,7 @@ export class KitoServer<TExtensions = {}> {
         global: true,
       });
     } else {
-      this.globalMiddlewares.push({
-        ...middleware,
-        global: true,
-      });
+      this.globalMiddlewares.push({ ...middleware, global: true });
     }
   }
 
@@ -276,10 +274,11 @@ export class KitoServer<TExtensions = {}> {
     );
 
     const routeHandler = async (ctx: KitoContext<TSchema>) => {
+      const reqBuilder = new RequestBuilder(ctx.req);
       const resBuilder = new ResponseBuilder(ctx.res);
+
       // biome-ignore lint/suspicious/noExplicitAny: ...
-      const context: any = ctx;
-      context.res = resBuilder;
+      const context: any = { req: reqBuilder, res: resBuilder };
 
       if (this.extensionFn) {
         this.extensionFn(context);
@@ -288,14 +287,7 @@ export class KitoServer<TExtensions = {}> {
       await fusedHandler(context);
     };
 
-    const rd = {
-      method,
-      path,
-      handler: routeHandler,
-      //schema: routeSchema,
-    };
-
-    this.coreServer.addRoute(rd);
+    this.coreServer.addRoute({ method, path, handler: routeHandler });
   }
 
   private fuseMiddlewares<TSchema extends SchemaDefinition>(
