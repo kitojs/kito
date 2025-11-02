@@ -345,6 +345,10 @@ export class KitoServer<TExtensions = {}> {
     this.coreServer.setConfig(configuration);
     await this.coreServer.start();
   }
+
+  close(): void {
+    this.coreServer.close();
+  }
 }
 
 // biome-ignore lint/complexity/noBannedTypes: ...
