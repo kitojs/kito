@@ -1,6 +1,7 @@
 use hyper::server::conn::http1;
 use hyper_util::rt::TokioIo;
 
+use napi::threadsafe_function::{ThreadsafeFunction, ThreadsafeFunctionCallMode};
 use napi_derive::napi;
 
 use std::net::SocketAddr;
@@ -48,14 +49,17 @@ impl ServerCore {
         insert_route(route)
     }
 
-    #[napi]
-    pub async unsafe fn start(&mut self) {
+    #[napi(ts_args_type = "ready: (() => void) | undefined")]
+    pub async unsafe fn start(&mut self, ready: Option<ThreadsafeFunction<()>>) {
         let (shutdown_tx, mut shutdown_rx) = watch::channel::<()>(());
         self.shutdown_tx = Some(shutdown_tx);
 
         let addr = self.get_addr();
         let listener = TcpListener::bind(addr).await.unwrap();
-        println!("Listening on http://{addr}");
+
+        if let Some(ready_cb) = ready {
+            ready_cb.call(Ok(()), ThreadsafeFunctionCallMode::NonBlocking);
+        }
 
         loop {
             tokio::select! {

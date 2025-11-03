@@ -9,7 +9,7 @@ import type {
   KitoContext,
 } from "@kitojs/types";
 
-import { ServerCore } from "@kitojs/kito-core";
+import { ServerCore, type ServerOptionsCore } from "@kitojs/kito-core";
 import { RequestBuilder } from "./request";
 import { ResponseBuilder } from "./response";
 
@@ -330,20 +330,40 @@ export class KitoServer<TExtensions = {}> {
     return item && (item.params || item.query || item.body || item.headers);
   }
 
-  async listen(port?: number, host?: string): Promise<void> {
+  async listen(
+    portOrCallback?: number | (() => void),
+    hostOrCallback?: string | (() => void),
+    maybeCallback?: () => void,
+  ): Promise<ServerOptionsCore> {
+    let port: number | undefined;
+    let host: string | undefined;
+    let ready: (() => void) | undefined;
+
+    if (typeof portOrCallback === "function") {
+      ready = portOrCallback;
+    } else {
+      port = portOrCallback;
+      if (typeof hostOrCallback === "function") {
+        ready = hostOrCallback;
+      } else {
+        host = hostOrCallback;
+        ready = maybeCallback;
+      }
+    }
+
     const finalPort = port ?? this.serverOptions.port ?? 3000;
     const finalHost = host ?? this.serverOptions.host ?? "0.0.0.0";
 
-    const configuration = {
+    const configuration: ServerOptionsCore = {
       port: finalPort,
       host: finalHost,
       ...this.serverOptions,
     };
 
-    console.log("config: ", JSON.stringify(configuration, null, 2));
-
     this.coreServer.setConfig(configuration);
-    await this.coreServer.start();
+    await this.coreServer.start(ready);
+
+    return configuration;
   }
 
   close(): void {
