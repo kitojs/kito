@@ -1,0 +1,27 @@
+{
+  "name": "@kitojs/bench",
+  "description": "Kito's benchmarks.",
+  "private": true,
+  "type": "module",
+
+  "scripts": {
+    "bench:run": "ts-node runBench.ts"
+  },
+  
+  "dependencies": {
+    "@hono/node-server": "^1.19.6",
+    "autocannon": "^8.0.0",
+    "chart.js": "^4.5.1",
+    "express": "^5.1.0",
+    "fastify": "^5.6.1",
+    "hono": "^4.10.4",
+    "kitojs": "workspace:*",
+    "skia-canvas": "^3.0.8"
+  },
+  "devDependencies": {
+    "@types/autocannon": "^7.12.7",
+    "@types/express": "^5.0.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
+  }
+}

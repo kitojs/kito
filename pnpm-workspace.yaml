@@ -1,3 +1,7 @@
 packages:
-  - "packages/*"
-  - "examples"
+  - packages/*
+  - examples
+  - bench
+
+onlyBuiltDependencies:
+  - skia-canvas
