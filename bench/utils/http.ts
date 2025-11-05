@@ -12,7 +12,7 @@ export const runBenchmark = async (url: string) => {
         connections,
         pipelining: pipelining || 1,
         workers: workers || undefined,
-        timeout: 10, 
+        timeout: 10,
         bailout: undefined,
         maxConnectionRequests: undefined,
         maxOverallRequests: undefined,

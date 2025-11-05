@@ -295,7 +295,7 @@ export class ResponseBuilder implements KitoResponse {
     if (firstHandler) {
       firstHandler();
     }
-    
+
     return this;
   }
 }

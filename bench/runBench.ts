@@ -73,7 +73,7 @@ async function main() {
 
   for (const result of results) {
     const OUTPUT_PATH = "results/data";
-    const data = JSON.stringify(result.autocannonResult, null, '\t');
+    const data = JSON.stringify(result.autocannonResult, null, "\t");
 
     if (!fs.existsSync(OUTPUT_PATH)) {
       fs.mkdirSync(OUTPUT_PATH, { recursive: true });

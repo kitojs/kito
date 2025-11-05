@@ -31,7 +31,7 @@ type ChartData = {
 export async function generateChart(data: ChartData, outputPath: string) {
   try {
     const canvas = new Canvas(1000, 600);
-  
+
     const colors = [
       "#3b82f6", // blue
       "#10b981", // green
@@ -40,11 +40,13 @@ export async function generateChart(data: ChartData, outputPath: string) {
       "#ec4899", // pink
       "#06b6d4", // cyan
     ];
-    
+
     const chart = new Chart(canvas as any, {
       type: "bar",
       data: {
-        labels: data.frameworks.map(f => f.charAt(0).toUpperCase() + f.slice(1)),
+        labels: data.frameworks.map(
+          (f) => f.charAt(0).toUpperCase() + f.slice(1),
+        ),
         datasets: [
           {
             label: "Requests/sec",
@@ -59,7 +61,7 @@ export async function generateChart(data: ChartData, outputPath: string) {
             backgroundColor: "#10b981",
             borderRadius: 8,
             borderSkipped: false,
-            yAxisID: 'y1',
+            yAxisID: "y1",
           },
         ],
       },
@@ -120,13 +122,13 @@ export async function generateChart(data: ChartData, outputPath: string) {
             displayColors: false,
             callbacks: {
               label: (context) => {
-                const label = context.dataset.label || '';
+                const label = context.dataset.label || "";
                 const value = context.parsed.y;
 
-                if (label.includes('Latency')) {
+                if (label.includes("Latency")) {
                   return `${label}: ${value?.toFixed(2)} ms`;
                 }
-                
+
                 return `${label}: ${value?.toLocaleString()} req/s`;
               },
             },
@@ -225,15 +227,15 @@ export async function generateChart(data: ChartData, outputPath: string) {
       await fs.mkdir(dir, { recursive: true });
     }
 
-    const pngBuffer = await canvas.toBuffer("png", { 
+    const pngBuffer = await canvas.toBuffer("png", {
       matte: "white",
       density: 2,
     });
-    
+
     await fs.writeFile(outputPath, pngBuffer);
 
     console.log(`✅ Chart saved to ${outputPath}`);
-    
+
     chart.destroy();
   } catch (err) {
     console.error("Error generating chart:", err);
