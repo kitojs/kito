@@ -7,8 +7,9 @@
   "scripts": {
     "bench:run": "ts-node runBench.ts"
   },
-  
+
   "dependencies": {
+    "@hapi/hapi": "^21.4.3",
     "@hono/node-server": "^1.19.6",
     "@koa/router": "^14.0.0",
     "@tinyhttp/app": "^3.0.1",

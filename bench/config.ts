@@ -7,6 +7,7 @@ export default {
     "restify",
     "tinyhttp",
     "koa",
+    "hapi",
   ],
   hostname: "localhost",
 
