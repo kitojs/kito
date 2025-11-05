@@ -1,12 +1,12 @@
 export default {
-  frameworks: ["kito", "express", "fastify", "hono"],
+  frameworks: ["kito", "express", "fastify", "hono", "restify"],
   hostname: "localhost",
 
   connections: 100,
   pipelining: 10,
   duration: 30,
   workers: undefined,
-  
+
   chart: {
     enabled: true,
     output: "results/charts/result.png",

@@ -16,11 +16,13 @@
     "fastify": "^5.6.1",
     "hono": "^4.10.4",
     "kitojs": "workspace:*",
+    "restify": "^11.1.0",
     "skia-canvas": "^3.0.8"
   },
   "devDependencies": {
     "@types/autocannon": "^7.12.7",
     "@types/express": "^5.0.5",
+    "@types/restify": "^8.5.12",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.2"
   }
