@@ -248,11 +248,11 @@ export class KitoServer<TExtensions = {}> {
     }
 
     const routeMiddlewares: MiddlewareDefinition[] = [];
-    //let routeSchema: TSchema | undefined;
+    let routeSchema: TSchema | undefined;
 
     for (const item of middlewares) {
       if (this.isSchemaDefinition(item)) {
-        //routeSchema = item as TSchema;
+        routeSchema = item as TSchema;
         routeMiddlewares.push({
           type: "schema",
           // biome-ignore lint/suspicious/noExplicitAny: ...
@@ -287,7 +287,40 @@ export class KitoServer<TExtensions = {}> {
       await fusedHandler(context);
     };
 
-    this.coreServer.addRoute({ method, path, handler: routeHandler });
+    const schemaJson = routeSchema
+      ? this.serializeSchema(routeSchema)
+      : undefined;
+
+    this.coreServer.addRoute({
+      method,
+      path,
+      handler: routeHandler,
+      schema: schemaJson,
+    });
+  }
+
+  private serializeSchema(schema: SchemaDefinition): string {
+    // biome-ignore lint/suspicious/noExplicitAny: ...
+    const serialized: any = {};
+
+    if (schema.params) {
+      // biome-ignore lint/suspicious/noExplicitAny: ...
+      serialized.params = (schema.params as any)._serialize();
+    }
+    if (schema.query) {
+      // biome-ignore lint/suspicious/noExplicitAny: ...
+      serialized.query = (schema.query as any)._serialize();
+    }
+    if (schema.body) {
+      // biome-ignore lint/suspicious/noExplicitAny: ...
+      serialized.body = (schema.body as any)._serialize();
+    }
+    if (schema.headers) {
+      // biome-ignore lint/suspicious/noExplicitAny: ...
+      serialized.headers = (schema.headers as any)._serialize();
+    }
+
+    return JSON.stringify(serialized);
   }
 
   private fuseMiddlewares<TSchema extends SchemaDefinition>(
