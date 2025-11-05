@@ -1,5 +1,5 @@
 export default {
-  frameworks: ["kito", "express", "fastify", "hono", "restify"],
+  frameworks: ["kito", "express", "fastify", "hono", "restify", "tinyhttp"],
   hostname: "localhost",
 
   connections: 100,
