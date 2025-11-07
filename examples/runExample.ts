@@ -10,4 +10,4 @@ if (!exampleName) {
   process.exit(1);
 }
 
-require(`./src/${exampleName}.ts`);
+import(`./src/${exampleName}.ts`);

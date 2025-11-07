@@ -2,16 +2,17 @@
   "name": "@kitojs/examples",
   "description": "Kito's usage examples.",
   "private": true,
-
+  "type": "module",
+  
   "scripts": {
-    "ex:run": "ts-node run-example.ts"
+    "ex:run": "tsx runExample.ts"
   },
 
   "dependencies": {
     "kitojs": "workspace:*"
   },
   "devDependencies": {
-    "ts-node": "^10.9.2",
+    "tsx": "^4.20.6",
     "typescript": "^5.9.2"
   }
 }
