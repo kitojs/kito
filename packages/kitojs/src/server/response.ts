@@ -3,6 +3,7 @@ import type {
   KitoResponse,
   CookieOptions,
   SendFileOptions,
+  CommonResponseHeaderNames,
 } from "@kitojs/types";
 
 import {
@@ -73,6 +74,8 @@ export class ResponseBuilder implements KitoResponse {
     this.finished = true;
   }
 
+  header(name: CommonResponseHeaderNames, value: string): KitoResponse;
+  header(name: string, value: string): KitoResponse;
   header(name: string, value: string): KitoResponse {
     this.checkFinished();
 
@@ -81,6 +84,8 @@ export class ResponseBuilder implements KitoResponse {
     return this;
   }
 
+  headers(headers: Record<CommonResponseHeaderNames, string>): KitoResponse;
+  headers(headers: Record<string, string>): KitoResponse;
   headers(headers: Record<string, string>): KitoResponse {
     this.checkFinished();
 
@@ -91,6 +96,8 @@ export class ResponseBuilder implements KitoResponse {
     return this;
   }
 
+  append(field: CommonResponseHeaderNames, value: string): KitoResponse;
+  append(field: string, value: string): KitoResponse;
   append(field: string, value: string): KitoResponse {
     this.checkFinished();
 
@@ -109,10 +116,14 @@ export class ResponseBuilder implements KitoResponse {
     return this;
   }
 
+  set(field: CommonResponseHeaderNames, value: string): KitoResponse;
+  set(field: string, value: string): KitoResponse;
   set(field: string, value: string): KitoResponse {
     return this.header(field, value);
   }
 
+  get(field: CommonResponseHeaderNames): string | undefined;
+  get(field: string): string | undefined;
   get(field: string): string | undefined {
     return this._headers.get(field.toLowerCase());
   }

@@ -1,5 +1,9 @@
 // biome-ignore assist/source/organizeImports: ...
-import type { KitoRequest } from "@kitojs/types";
+import type {
+  CommonHeaderNames,
+  KitoRequest,
+  RequestHeaders,
+} from "@kitojs/types";
 import {
   getBodyBuffer,
   getHeader,
@@ -62,13 +66,15 @@ export class RequestBuilder implements KitoRequest {
     return this.body.toString("utf-8");
   }
 
-  get headers(): Record<string, string> {
+  get headers(): RequestHeaders {
     if (!this._headers) {
       this._headers = getAllHeaders(this.core);
     }
     return this._headers;
   }
 
+  header(name: CommonHeaderNames): string | undefined;
+  header(name: string): string | undefined;
   header(name: string): string | undefined {
     const value = getHeader(this.core, name.toLowerCase());
     return value ?? undefined;
@@ -185,7 +191,7 @@ export class RequestBuilder implements KitoRequest {
 
   get raw(): {
     body: Buffer;
-    headers: Record<string, string>;
+    headers: RequestHeaders;
     url: string;
     method: string;
   } {
