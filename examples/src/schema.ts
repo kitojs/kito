@@ -5,7 +5,7 @@ const app = server();
 
 const UserSchema = schema({
   params: t.object({ id: t.str().uuid() }),
-  query: t.object({ limit: t.num().min(1).max(100).optional().default(10) }),
+  query: t.object({ limit: t.num().min(1).max(100).default(10) }),
   body: t.object({ name: t.str().min(1) }),
 });
 

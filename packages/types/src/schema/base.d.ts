@@ -5,6 +5,11 @@ export interface SchemaDefinition {
   query?: SchemaType;
   body?: SchemaType;
   headers?: SchemaType;
+  response?: ResponseSchemaDefinition;
+}
+
+export interface ResponseSchemaDefinition {
+  [statusCode: number]: SchemaType;
 }
 
 export type InferSchemaRequest<T extends SchemaDefinition> = {
@@ -28,10 +33,7 @@ export interface SchemaType {
   _serialize?(): any;
 }
 
-export type InferType<T extends SchemaType> = T extends {
-  _optional: true;
-  _default: infer D;
-}
+export type InferType<T extends SchemaType> = T extends { _default: infer D }
   ? D
   : T extends { _optional: true }
     ? T["_type"] | undefined
