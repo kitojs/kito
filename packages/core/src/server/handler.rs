@@ -11,7 +11,7 @@ use std::{collections::HashMap, convert::Infallible, net::SocketAddr, sync::Arc}
 use tokio::sync::oneshot;
 
 use crate::{
-    http::{request::RequestCore, response::ResponseBuilderCore},
+    http::{request::RequestCore, response::ResponseChannel},
     server::{context::ContextObject, core::ServerOptionsCore, routes::ROUTES},
     validation::parser::*,
 };
@@ -149,10 +149,11 @@ pub async fn handle_request(
             }
 
             let (response_tx, response_rx) = oneshot::channel();
-            let res_builder = Arc::new(ResponseBuilderCore::new(response_tx));
+            let response_channel = Arc::new(ResponseChannel::new(response_tx));
+
             let ctx_obj = ContextObject {
                 req: External::new(Arc::new(req_core)),
-                res: External::new(res_builder.clone()),
+                res: External::new(response_channel.clone()),
             };
 
             let _ = route.handler.call(ctx_obj, ThreadsafeFunctionCallMode::NonBlocking);

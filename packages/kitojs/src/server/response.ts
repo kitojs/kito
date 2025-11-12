@@ -6,18 +6,8 @@ import type {
   CommonResponseHeaderNames,
 } from "@kitojs/types";
 
-import {
-  setStatusResponse,
-  setHeaderResponse,
-  setHeadersResponse,
-  appendHeaderResponse,
-  setCookieResponse,
-  setBodyBytes,
-  setBodyString,
-  setRedirectResponse,
-  sendFileResponse,
-  endResponse,
-} from "@kitojs/kito-core";
+import { sendResponse } from "@kitojs/kito-core";
+import { readFileSync } from "node:fs";
 
 const HTTP_STATUS_MESSAGES: Record<number, string> = {
   100: "Continue",
@@ -39,15 +29,25 @@ const HTTP_STATUS_MESSAGES: Record<number, string> = {
   503: "Service Unavailable",
 };
 
+interface ResponseState {
+  status: number;
+  headers: Map<string, string>;
+  body?: Buffer;
+}
+
 export class ResponseBuilder implements KitoResponse {
   // biome-ignore lint/suspicious/noExplicitAny: ...
-  private builder: any;
-  private _headers: Map<string, string> = new Map();
+  private channel: any;
+  private state: ResponseState;
   private finished = false;
 
   // biome-ignore lint/suspicious/noExplicitAny: ...
-  constructor(responseBuilderCore: any) {
-    this.builder = responseBuilderCore;
+  constructor(responseChannel: any) {
+    this.channel = responseChannel;
+    this.state = {
+      status: 200,
+      headers: new Map(),
+    };
   }
 
   private checkFinished(): void {
@@ -56,22 +56,47 @@ export class ResponseBuilder implements KitoResponse {
     }
   }
 
+  private serializeAndSend(): void {
+    const headersArray = Array.from(this.state.headers.entries());
+    const headersJson = JSON.stringify(headersArray);
+    const headersBytes = Buffer.from(headersJson, "utf-8");
+
+    const body = this.state.body || Buffer.alloc(0);
+
+    const totalSize = 2 + 4 + headersBytes.length + body.length;
+    const buffer = Buffer.allocUnsafe(totalSize);
+
+    let offset = 0;
+
+    buffer.writeUInt16LE(this.state.status, offset);
+    offset += 2;
+
+    buffer.writeUInt32LE(headersBytes.length, offset);
+    offset += 4;
+
+    headersBytes.copy(buffer, offset);
+    offset += headersBytes.length;
+
+    if (body.length > 0) {
+      body.copy(buffer, offset);
+    }
+
+    sendResponse(this.channel, buffer);
+    this.finished = true;
+  }
+
   status(code: number): KitoResponse {
     this.checkFinished();
-
-    setStatusResponse(this.builder, code);
+    this.state.status = code;
     return this;
   }
 
   sendStatus(code: number): void {
     this.checkFinished();
-
     const message = HTTP_STATUS_MESSAGES[code] || "Unknown";
-    setStatusResponse(this.builder, code);
-    setBodyString(this.builder, message);
-    endResponse(this.builder);
-
-    this.finished = true;
+    this.state.status = code;
+    this.state.body = Buffer.from(message, "utf-8");
+    this.serializeAndSend();
   }
 
   header(name: CommonResponseHeaderNames, value: string): KitoResponse;
@@ -79,8 +104,7 @@ export class ResponseBuilder implements KitoResponse {
   header(name: string, value: string): KitoResponse {
     this.checkFinished();
 
-    this._headers.set(name.toLowerCase(), value);
-    setHeaderResponse(this.builder, name, value);
+    this.state.headers.set(name.toLowerCase(), value);
     return this;
   }
 
@@ -90,9 +114,8 @@ export class ResponseBuilder implements KitoResponse {
     this.checkFinished();
 
     for (const [name, value] of Object.entries(headers)) {
-      this._headers.set(name.toLowerCase(), value);
+      this.state.headers.set(name.toLowerCase(), value);
     }
-    setHeadersResponse(this.builder, headers);
     return this;
   }
 
@@ -102,15 +125,12 @@ export class ResponseBuilder implements KitoResponse {
     this.checkFinished();
 
     const key = field.toLowerCase();
-    const existing = this._headers.get(key);
+    const existing = this.state.headers.get(key);
 
     if (existing) {
-      const newValue = `${existing}, ${value}`;
-      this._headers.set(key, newValue);
-      appendHeaderResponse(this.builder, field, value);
+      this.state.headers.set(key, `${existing}, ${value}`);
     } else {
-      this._headers.set(key, value);
-      setHeaderResponse(this.builder, field, value);
+      this.state.headers.set(key, value);
     }
 
     return this;
@@ -125,7 +145,7 @@ export class ResponseBuilder implements KitoResponse {
   get(field: CommonResponseHeaderNames): string | undefined;
   get(field: string): string | undefined;
   get(field: string): string | undefined {
-    return this._headers.get(field.toLowerCase());
+    return this.state.headers.get(field.toLowerCase());
   }
 
   type(contentType: string): KitoResponse {
@@ -152,7 +172,7 @@ export class ResponseBuilder implements KitoResponse {
       contentType = mimeTypes[contentType] || contentType;
     }
 
-    return this.header("Content-Type", contentType);
+    return this.header("content-type", contentType);
   }
 
   contentType(contentType: string): KitoResponse {
@@ -162,18 +182,65 @@ export class ResponseBuilder implements KitoResponse {
   cookie(name: string, value: string, options?: CookieOptions): KitoResponse {
     this.checkFinished();
 
-    // biome-ignore lint/suspicious/noExplicitAny: ...
-    setCookieResponse(this.builder, name, value, options as any);
+    const cookie = this.serializeCookie(name, value, options);
+
+    const existing = this.state.headers.get("set-cookie");
+    if (existing) {
+      this.state.headers.set("set-cookie", `${existing}, ${cookie}`);
+    } else {
+      this.state.headers.set("set-cookie", cookie);
+    }
+
     return this;
+  }
+
+  private serializeCookie(
+    name: string,
+    value: string,
+    options?: CookieOptions,
+  ): string {
+    let cookie = `${name}=${value}`;
+
+    if (options?.maxAge !== undefined) {
+      cookie += `; Max-Age=${options.maxAge}`;
+    }
+
+    if (options?.path) {
+      cookie += `; Path=${options.path}`;
+    } else {
+      cookie += "; Path=/";
+    }
+
+    if (options?.domain) {
+      cookie += `; Domain=${options.domain}`;
+    }
+
+    if (options?.httpOnly) {
+      cookie += "; HttpOnly";
+    }
+
+    if (options?.secure) {
+      cookie += "; Secure";
+    }
+
+    if (options?.sameSite) {
+      const sameSite =
+        typeof options.sameSite === "string"
+          ? options.sameSite
+          : options.sameSite
+            ? "Strict"
+            : "Lax";
+      cookie += `; SameSite=${sameSite}`;
+    }
+
+    return cookie;
   }
 
   clearCookie(name: string, options?: CookieOptions): KitoResponse {
     this.checkFinished();
 
     const clearOptions = { ...options, maxAge: 0, expires: new Date(0) };
-    // biome-ignore lint/suspicious/noExplicitAny: ...
-    setCookieResponse(this.builder, name, "", clearOptions as any);
-    return this;
+    return this.cookie(name, "", clearOptions);
   }
 
   // end methods
@@ -181,15 +248,14 @@ export class ResponseBuilder implements KitoResponse {
   send(data: unknown): void {
     this.checkFinished();
     if (Buffer.isBuffer(data)) {
-      setBodyBytes(this.builder, data);
+      this.state.body = data;
     } else if (typeof data === "string") {
-      setBodyString(this.builder, data);
+      this.state.body = Buffer.from(data, "utf-8");
     } else {
-      setBodyString(this.builder, String(data));
+      this.state.body = Buffer.from(String(data), "utf-8");
     }
-    endResponse(this.builder);
 
-    this.finished = true;
+    this.serializeAndSend();
   }
 
   json(data: unknown): void {
@@ -197,45 +263,38 @@ export class ResponseBuilder implements KitoResponse {
 
     this.type("application/json");
     const jsonStr = JSON.stringify(data);
-    setBodyString(this.builder, jsonStr);
-    endResponse(this.builder);
-
-    this.finished = true;
+    this.state.body = Buffer.from(jsonStr, "utf-8");
+    this.serializeAndSend();
   }
 
   text(data: string): void {
     this.checkFinished();
 
     this.type("text/plain");
-    setBodyString(this.builder, data);
-    endResponse(this.builder);
-
-    this.finished = true;
+    this.state.body = Buffer.from(data, "utf-8");
+    this.serializeAndSend();
   }
 
   html(data: string): void {
     this.checkFinished();
 
     this.type("text/html");
-    setBodyString(this.builder, data);
-    endResponse(this.builder);
-
-    this.finished = true;
+    this.state.body = Buffer.from(data, "utf-8");
+    this.serializeAndSend();
   }
 
   redirect(url: string, code?: number): void {
     this.checkFinished();
 
-    setRedirectResponse(this.builder, url, code);
-    endResponse(this.builder);
-
-    this.finished = true;
+    this.state.status = code || 302;
+    this.header("location", url);
+    this.serializeAndSend();
   }
 
   location(url: string): KitoResponse {
     this.checkFinished();
 
-    return this.header("Location", url);
+    return this.header("location", url);
   }
 
   attachment(filename?: string): KitoResponse {
@@ -244,12 +303,12 @@ export class ResponseBuilder implements KitoResponse {
     if (filename) {
       const encodedFilename = encodeURIComponent(filename);
       return this.header(
-        "Content-Disposition",
+        "content-disposition",
         `attachment; filename="${encodedFilename}"`,
       );
     }
 
-    return this.header("Content-Disposition", "attachment");
+    return this.header("content-disposition", "attachment");
   }
 
   download(path: string, filename?: string): void {
@@ -257,27 +316,78 @@ export class ResponseBuilder implements KitoResponse {
 
     const name = filename || path.split("/").pop() || "download";
     this.attachment(name);
-    // biome-ignore lint/suspicious/noExplicitAny: ...
-    sendFileResponse(this.builder, path, undefined as any);
-    endResponse(this.builder);
 
-    this.finished = true;
+    try {
+      this.state.body = readFileSync(path);
+      this.serializeAndSend();
+    } catch (_) {
+      this.state.status = 404;
+      this.state.body = Buffer.from("File Not Found", "utf-8");
+      this.serializeAndSend();
+    }
   }
 
   sendFile(path: string, options?: SendFileOptions): void {
     this.checkFinished();
 
-    // biome-ignore lint/suspicious/noExplicitAny: ...
-    sendFileResponse(this.builder, path, options as any);
-    endResponse(this.builder);
+    try {
+      const fullPath = options?.root ? `${options.root}/${path}` : path;
+      this.state.body = readFileSync(fullPath);
 
-    this.finished = true;
+      const mimeType = this.getMimeType(path);
+      this.type(mimeType);
+
+      if (options?.headers) {
+        this.headers(options.headers);
+      }
+
+      this.serializeAndSend();
+    } catch (_) {
+      this.state.status = 404;
+      this.state.body = Buffer.from("File Not Found", "utf-8");
+      this.serializeAndSend();
+    }
+  }
+
+  private getMimeType(path: string): string {
+    const extension = path.split(".").pop()?.toLowerCase() || "";
+
+    const mimeTypes: Record<string, string> = {
+      html: "text/html",
+      htm: "text/html",
+      css: "text/css",
+      js: "application/javascript",
+      mjs: "application/javascript",
+      json: "application/json",
+      xml: "application/xml",
+      txt: "text/plain",
+      png: "image/png",
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      gif: "image/gif",
+      svg: "image/svg+xml",
+      webp: "image/webp",
+      ico: "image/x-icon",
+      pdf: "application/pdf",
+      zip: "application/zip",
+      wasm: "application/wasm",
+      mp4: "video/mp4",
+      webm: "video/webm",
+      mp3: "audio/mpeg",
+      wav: "audio/wav",
+      woff: "font/woff2",
+      woff2: "font/woff2",
+      ttf: "font/ttf",
+      otf: "font/otf",
+    };
+
+    return mimeTypes[extension] || "application/octet-stream";
   }
 
   vary(field: string): KitoResponse {
     this.checkFinished();
 
-    return this.append("Vary", field);
+    return this.append("vary", field);
   }
 
   links(links: Record<string, string>): KitoResponse {
@@ -287,7 +397,7 @@ export class ResponseBuilder implements KitoResponse {
       .map(([rel, url]) => `<${url}>; rel="${rel}"`)
       .join(", ");
 
-    return this.header("Link", linkHeader);
+    return this.header("link", linkHeader);
   }
 
   format(obj: Record<string, () => void>): KitoResponse {

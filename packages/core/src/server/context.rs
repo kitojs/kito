@@ -1,4 +1,4 @@
-use crate::http::{request::RequestCore, response::ResponseBuilderCore};
+use crate::http::{request::RequestCore, response::ResponseChannel};
 use napi::{
     Env,
     bindgen_prelude::{External, Object, ToNapiValue},
@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 pub struct ContextObject {
     pub req: External<Arc<RequestCore>>,
-    pub res: External<Arc<ResponseBuilderCore>>,
+    pub res: External<Arc<ResponseChannel>>,
 }
 
 impl ToNapiValue for ContextObject {
