@@ -12,15 +12,52 @@ Each package is **independent**, versioned, and published under the `@kitojs/*` 
 ## 📂 Project structure
 
 ```
-📦packages
-┣ 📂core        # @kitojs/kito-core
-┃ ┣ 📂src
-┃ ┃ ┗ 📜lib.rs        # Main Rust source file, entrypoint for the N-API bindings
-┃ ┣ 📜Cargo.toml      # Rust crate manifest (dependencies, metadata)
-┃ ┣ 📜build.rs        # Build script (used to configure napi-rs build steps)
-┃ ┣ 📜package.json    # JS/TS package manifest (defines the npm package)
-┃ ┗ 📜.gitignore      # Local ignore rules for this package
-┗ 📜readme.md         # This file (overview of all packages)
+📂 packages/
+├── 📂 cli
+│   ├── 📄 Cargo.toml
+│   ├── 📄 package.json
+│   ├── 📄 install.js
+│   ├── 📄 .gitignore
+│   └── 📂 src
+│       ├── 📄 commands.rs
+│       ├── 📄 main.rs
+│       └── 📄 utils.rs
+├── 📂 core
+│   ├── 📄 Cargo.toml
+│   ├── 📄 package.json
+│   ├── 📄 build.rs
+│   ├── 📄 .gitignore
+│   ├── 📂 src
+│   │   ├── 📄 lib.rs
+│   │   ├── 📄 server.rs
+│   │   ├── 📄 http.rs
+│   │   ├── 📂 http
+│   │   ├── 📂 server
+│   │   └── 📂 validation
+│   └── 📄 tsconfig.json
+├── 📂 kitojs
+│   ├── 📄 package.json
+│   ├── 📄 tsconfig.json
+│   ├── 📄 tsdown.config.ts
+│   ├── 📂 src
+│   │   ├── 📄 index.ts
+│   │   ├── 📂 server
+│   │   ├── 📂 helpers
+│   │   └── 📂 schemas
+│   └── 📄 .gitignore
+├── 📂 types
+│   ├── 📄 package.json
+│   ├── 📄 tsconfig.json
+│   ├── 📄 tsdown.config.ts
+│   ├── 📂 src
+│   │   ├── 📄 index.d.ts
+│   │   ├── 📄 context.d.ts
+│   │   ├── 📄 routes.d.ts
+│   │   ├── 📄 handlers.d.ts
+│   │   ├── 📂 schema
+│   │   └── 📂 http
+│   └── 📄 .gitignore
+└── 📄 readme.md
 ```
 
 ---
@@ -28,13 +65,37 @@ Each package is **independent**, versioned, and published under the `@kitojs/*` 
 ## 📦 Packages
 
 ### `@kitojs/kito-core`
-- The **bridge** between TypeScript and the Rust core (via [N-API](https://github.com/napi-rs/napi-rs)).  
-- Exposes the main API surface:  
-  - `server()` creation.  
-  - Route definition (`app.get`, `app.post`, etc.).  
-  - Middleware registration (`app.use`).  
-  - Integration with schema validators.  
-- Internally, it gathers all route/middleware/validation metadata and forwards it to the Rust runtime, where execution happens.
+- The **Rust core** of the framework, exposing high-performance HTTP server functionality via [N-API](https://github.com/napi-rs/napi-rs).  
+- Responsibilities:
+  - Handling HTTP requests/responses efficiently.  
+  - Route and middleware execution.  
+  - Validation of request schemas and automatic error handling.  
+  - Integration with JS/TS through N-API bindings.  
+- This package is **fully written in Rust**, compiled to a native module, and serves as the runtime for all server logic.
+
+### `@kitojs/kito-cli`
+- Command-line interface to scaffold and manage Kito projects.  
+- Features:
+  - Project initialization (`kito init`, `kito new`).
+  - Running local servers and hot reload.
+  - Helpers to manage routes, schemas, and project metadata.
+
+### `kitojs` (TypeScript library)
+- Main **TypeScript wrapper** for Kito, exposing the framework API to developers.  
+- Responsibilities:
+  - Create and configure servers (`app.get`, `app.post`, `app.use`, etc.).  
+  - Define route schemas, middleware, and static responses.  
+  - Utilities for schema building, validation, and server context.  
+  - Analyze route handlers for static/dynamic optimization.  
+- This package **depends on `kito-core`** for the runtime, but provides a developer-friendly API.
+
+### `@kitojs/types`
+- Standalone package containing **TypeScript type definitions** for Kito.  
+- Features:
+  - Type definitions for request, response, and server context.
+  - Route, schema, and handler typings.
+  - Shared types between core, CLI, and the TS library.
+- Designed to enable **full type safety** in TypeScript projects using Kito.
 
 ---
 
