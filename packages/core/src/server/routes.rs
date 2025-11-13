@@ -1,11 +1,11 @@
 use napi::Error;
 use napi::{bindgen_prelude::Function, threadsafe_function::ThreadsafeFunction};
 
-use dashmap::DashMap;
 use once_cell::sync::Lazy;
 use serde_json::{Value, from_str, from_value};
 
 use crate::server::context::ContextObject;
+use crate::server::router::GlobalRouter;
 use crate::validation::types::SchemaType;
 
 pub type RouteHandler = ThreadsafeFunction<ContextObject, (), ContextObject, napi::Status, false>;
@@ -26,7 +26,7 @@ pub struct RouteSchema {
     pub headers: Option<SchemaType>,
 }
 
-pub static ROUTES: Lazy<DashMap<Box<str>, Vec<CompiledRoute>>> = Lazy::new(DashMap::new);
+pub static ROUTER: Lazy<GlobalRouter> = Lazy::new(GlobalRouter::new);
 
 #[napi(object)]
 pub struct Route {
@@ -71,6 +71,6 @@ pub fn insert_route(route: Route) -> napi::Result<()> {
         schema,
     };
 
-    ROUTES.entry(method_key).or_default().push(compiled);
+    ROUTER.insert(&route.method, compiled).map_err(|e| Error::from_reason(e))?;
     Ok(())
 }
