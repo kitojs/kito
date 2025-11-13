@@ -15,6 +15,8 @@ import { ServerCore, type ServerOptionsCore } from "@kitojs/kito-core";
 import { RequestBuilder } from "./request";
 import { ResponseBuilder } from "./response";
 
+import { analyzeHandler, type StaticResponseType } from "./analyzer";
+
 // biome-ignore lint/complexity/noBannedTypes: ...
 export class KitoServer<TExtensions = {}>
   implements KitoServerInstance<TExtensions>
@@ -378,6 +380,12 @@ export class KitoServer<TExtensions = {}>
       }
     }
 
+    let staticResponse: StaticResponseType = { type: "none" };
+
+    if (this.globalMiddlewares.length === 0 && routeMiddlewares.length === 0) {
+      staticResponse = analyzeHandler(finalHandler);
+    }
+
     const fusedHandler = this.fuseMiddlewares(
       this.globalMiddlewares,
       routeMiddlewares,
@@ -402,11 +410,17 @@ export class KitoServer<TExtensions = {}>
       ? this.serializeSchema(routeSchema)
       : undefined;
 
+    const staticResponseJson =
+      staticResponse.type !== "none"
+        ? JSON.stringify(staticResponse)
+        : undefined;
+
     this.coreServer.addRoute({
       method,
       path,
       handler: routeHandler,
       schema: schemaJson,
+      staticResponse: staticResponseJson,
     });
   }
 

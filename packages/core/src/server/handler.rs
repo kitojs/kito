@@ -12,7 +12,11 @@ use tokio::sync::oneshot;
 
 use crate::{
     http::{request::RequestCore, response::ResponseChannel},
-    server::{context::ContextObject, core::ServerOptionsCore, routes::ROUTER},
+    server::{
+        context::ContextObject,
+        core::ServerOptionsCore,
+        routes::{ROUTER, ResponseStrategy},
+    },
     validation::parser::*,
 };
 
@@ -35,6 +39,30 @@ pub async fn handle_request(
     };
 
     let route = matched.route;
+
+    if let ResponseStrategy::FullStatic(ref response) = route.strategy {
+        return Ok(response.clone());
+    }
+
+    if let ResponseStrategy::ParamTemplate { ref template, ref params, ref headers } =
+        route.strategy
+    {
+        let mut rendered = template.clone();
+
+        for param_name in params {
+            if let Some(value) = matched.params.get(param_name) {
+                let placeholder = format!("{{{{params.{param_name}}}}}");
+                rendered = rendered.replace(&placeholder, value);
+            }
+        }
+
+        let mut response = Response::builder().status(200);
+        for (name, value) in headers {
+            response = response.header(name.as_str(), value.as_str());
+        }
+
+        return Ok(response.body(Full::new(Bytes::from(rendered))).unwrap());
+    }
 
     let mut req_core =
         match RequestCore::new(req, Some(remote_addr), config.trust_proxy.unwrap_or(false)).await {
@@ -147,7 +175,9 @@ pub async fn handle_request(
         res: External::new(res_builder.clone()),
     };
 
-    let _ = route.handler.call(ctx_obj, ThreadsafeFunctionCallMode::NonBlocking);
+    if let ResponseStrategy::Dynamic(handler) = route.strategy.clone() {
+        let _ = handler.call(ctx_obj, ThreadsafeFunctionCallMode::NonBlocking);
+    }
 
     if let Ok(response) = response_rx.await {
         return Ok(response);
