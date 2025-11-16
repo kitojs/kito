@@ -1,4 +1,5 @@
 pub mod parser;
+pub mod parser_tests;
 pub mod tests;
 pub mod types;
 pub mod validators;
