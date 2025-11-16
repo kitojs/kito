@@ -49,10 +49,10 @@ jobs:
         working-directory: kito/packages/kitojs
         
       - name: Generate TypeDoc
+        working-directory: kito
         run: |
           cd packages/kitojs
           pnpm exec typedoc
-          working-directory: kito
 
       - name: Copy docs to web repo
         run: |
