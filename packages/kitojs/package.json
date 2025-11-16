@@ -3,7 +3,11 @@
   "version": "1.0.0",
   "description": "🐺 The high-performance, type-safe and modern TypeScript web framework written in Rust.",
   "scripts": {
-    "build": "tsdown"
+    "build": "tsdown",
+
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
 
   "dependencies": {
@@ -12,8 +16,10 @@
     "acorn-walk": "^8.3.4"
   },
   "devDependencies": {
+    "@kitojs/types": "workspace:*",
+    "@vitest/coverage-v8": "^4.0.9",
     "tsdown": "^0.15.0",
-    "@kitojs/types": "workspace:*"
+    "vitest": "^4.0.9"
   },
   "peerDependencies": {
     "typescript": "^5.9.2"
