@@ -15,7 +15,6 @@
     "ts:build": "pnpm --filter @kitojs/types build && pnpm --filter kitojs build",
 
     "dev": "pnpm -r dev",
-    "docs": "pnpm --filter kitojs docs",
 
     "ex:run": "pnpm --filter examples ex:run",
     "bench:run": "pnpm --filter bench bench:run"

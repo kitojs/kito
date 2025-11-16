@@ -47,10 +47,12 @@ jobs:
       - name: Install TypeDoc in kitojs package
         run: pnpm add -D typedoc
         working-directory: kito/packages/kitojs
-
+        
       - name: Generate TypeDoc
-        run: pnpm docs
-        working-directory: kito/packages/kitojs
+        run: |
+          cd packages/kitojs
+          pnpm exec typedoc
+          working-directory: kito
 
       - name: Copy docs to web repo
         run: |
