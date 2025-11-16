@@ -7,7 +7,11 @@
 
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+
+    "docs": "typedoc",
+    "docs:watch": "typedoc --watch",
+    "docs:serve": "pnpm dlx serve docs"
   },
 
   "dependencies": {
@@ -19,6 +23,7 @@
     "@kitojs/types": "workspace:*",
     "@vitest/coverage-v8": "^4.0.9",
     "tsdown": "^0.15.0",
+    "typedoc": "^0.28.14",
     "vitest": "^4.0.9"
   },
   "peerDependencies": {

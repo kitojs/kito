@@ -1,0 +1,43 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["src/index.ts"],
+  "out": "docs",
+  "plugin": [],
+  "theme": "default",
+  "name": "Kito Framework",
+  "includeVersion": true,
+  "readme": "../../readme.md",
+  "categorizeByGroup": true,
+  "categoryOrder": [
+    "Server",
+    "Schemas",
+    "Middleware",
+    "Types",
+    "*"
+  ],
+  "exclude": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/tests/**",
+    "**/*.test.ts",
+    "**/server/analyzer.ts",
+    "**/server/request.ts",
+    "**/server/response.ts"
+  ],
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "excludeInternal": true,
+  "cleanOutputDir": true,
+  "navigation": {
+    "includeCategories": true,
+    "includeGroups": true
+  },
+  "searchInComments": true,
+  "sort": ["source-order", "required-first", "alphabetical"],
+  "treatWarningsAsErrors": false,
+  "validation": {
+    "notExported": true,
+    "invalidLink": true,
+    "notDocumented": false
+  }
+}
