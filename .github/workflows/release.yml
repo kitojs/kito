@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 jobs:
   build-napi:
@@ -62,7 +63,7 @@ jobs:
           target: ${{ matrix.settings.target }}
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install -r
 
       - name: Build NAPI binary
         run: ${{ matrix.settings.build }}
@@ -110,7 +111,7 @@ jobs:
           rm -rf packages/core/dist/bindings-*
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install -r
 
       - name: Build TypeScript packages
         run: pnpm ts:build
