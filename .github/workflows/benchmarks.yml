@@ -26,7 +26,7 @@ jobs:
           version: 8
 
       - name: Install dependencies
-        run: pnpm install -r --ignore-scripts
+        run: pnpm install -r
 
       - name: Build Kito
         run: pnpm build
