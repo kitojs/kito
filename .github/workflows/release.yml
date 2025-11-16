@@ -21,15 +21,6 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
             build: pnpm core:build --target x86_64-unknown-linux-musl
-          
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            build: pnpm core:build --target aarch64-unknown-linux-gnu
-          
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-musl
-            build: pnpm core:build --target aarch64-unknown-linux-musl
-          
           - os: macos-latest
             target: x86_64-apple-darwin
             build: pnpm core:build
@@ -164,10 +155,10 @@ jobs:
             ```
             
             ### What's Changed
-            See the [changelog](https://github.com/kitojs/kito/blob/main/CHANGELOG.md) for details.
+            See the changelog for details.
             
             ### Documentation
-            Visit [kito.pages.dev](https://kito.pages.dev) for full documentation.
+            Visit kito.pages.dev for full documentation.
           draft: false
           prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
         env:
