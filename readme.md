@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://github.com/kitojs/.github/blob/77b74df56562b7d75cf04bb7237dcd71527e6293/assets/kito-banner.png" width="220px" />
+  <img src=".github/assets/kito-banner.png" width="220px" />
   
   <br />
   <br />
@@ -12,18 +12,17 @@
 
 ---
 
-- **Extreme performance** – Rust core optimized for extremely speed & efficiency. **See the [benchmarks](https://github.com/kitojs/benchmarks).**
+- **Extreme performance** – Rust core optimized for extremely speed & efficiency. **See the [benchmarks](/bench).**
 - **Type-safe** – full TypeScript support with end-to-end safety and exceptional DX.
 - **Schema validation** – built-in validation with zero bloat.  
-- **Middleware system** – composable and flexible like you expect.  
-- **Zero dependencies** – no dependencies on the package.
+- **Middleware system** – composable and flexible like you expect.
 - **Cross-platform** – runs on Node.js, Bun, and Deno.  
 
 ---
 
 ## 🚀 Quick Start
 
-Install the official [**Kito CLI**](https://github.com/kitojs/cli) to scaffold and manage projects easily:
+Install the official [**Kito CLI**](/cli) to scaffold and manage projects easily:
 
 ```bash
 npm i -g @kitojs/cli
@@ -43,7 +42,7 @@ import { server } from "kitojs";
 
 const app = server();
 
-app.get("/", (ctx) => {
+app.get("/", ctx => {
   ctx.res.send("hello world!");
 });
 
