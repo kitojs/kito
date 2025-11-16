@@ -67,7 +67,7 @@ jobs:
 
       - name: Build NAPI binary
         run: ${{ matrix.settings.build }}
-        working-directory: packages/core
+        working-directory: .
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -115,6 +115,7 @@ jobs:
 
       - name: Build TypeScript packages
         run: pnpm ts:build
+        working-directory: .
 
       - name: Publish @kitojs/kito-core
         run: pnpm publish --access public --no-git-checks
