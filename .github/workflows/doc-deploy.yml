@@ -43,9 +43,13 @@ jobs:
         run: pnpm build
         working-directory: kito
 
+      - name: Install TypeDoc in kitojs package
+        run: pnpm add -D typedoc
+        working-directory: kito/packages/kitojs
+
       - name: Generate TypeDoc
         run: pnpm docs
-        working-directory: kito
+        working-directory: kito/packages/kitojs
 
       - name: Copy docs to web repo
         run: |
@@ -54,7 +58,10 @@ jobs:
           
           # Copy new generated docs
           mkdir -p web/public/api
-          cp -r kito/docs/* web/public/api/
+          cp -r kito/packages/kitojs/docs/* web/public/api/
+          
+          # Verify files were copied
+          ls -la web/public/api/
 
       - name: Commit and push to web repo
         working-directory: web
@@ -67,6 +74,6 @@ jobs:
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "docs: update API documentation"
+            git commit -m "docs: update API documentation [skip ci]"
             git push
           fi
