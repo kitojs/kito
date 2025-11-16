@@ -1,5 +1,9 @@
 name: Release
 
+permissions:
+  contents: write
+  packages: write
+
 on:
   push:
     tags:
@@ -20,14 +24,15 @@ jobs:
           
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
-            build: pnpm core:build --target x86_64-unknown-linux-musl
+            build: pnpm core:build
+          
           - os: macos-latest
             target: x86_64-apple-darwin
             build: pnpm core:build
           
           - os: macos-latest
             target: aarch64-apple-darwin
-            build: pnpm core:build --target aarch64-apple-darwin
+            build: pnpm core:build
           
           - os: windows-latest
             target: x86_64-pc-windows-msvc
@@ -64,8 +69,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: bindings-${{ matrix.settings.target }}
-          path: packages/core/dist/*.node
-          if-no-files-found: error
+          path: packages/core/dist
+          retention-days: 3
 
   publish-npm:
     name: Publish to NPM
@@ -96,13 +101,14 @@ jobs:
         run: |
           for dir in packages/core/dist/bindings-*; do
             if [ -d "$dir" ]; then
-              mv "$dir"/*.node packages/core/dist/ 2>/dev/null || true
+              mv "$dir"/* packages/core/dist/ 2>/dev/null || true
             fi
           done
           rm -rf packages/core/dist/bindings-*
 
       - name: Install dependencies
         run: pnpm install -r
+        working-directory: .
 
       - name: Build TypeScript packages
         run: pnpm ts:build
@@ -162,4 +168,5 @@ jobs:
           draft: false
           prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
         env:
+          # normalmente funciona con GITHUB_TOKEN y los permissions arriba
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
