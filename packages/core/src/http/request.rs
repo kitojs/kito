@@ -55,7 +55,7 @@ impl RequestCore {
                 if let Some((key, value)) = pair.split_once('=') {
                     let decoded_key = urlencoding::decode(key).unwrap_or_default().into_owned();
                     let decoded_value = urlencoding::decode(value).unwrap_or_default().into_owned();
-                    query_raw.entry(decoded_key).or_insert_with(Vec::new).push(decoded_value);
+                    query_raw.entry(decoded_key).or_default().push(decoded_value);
                 }
             }
         }

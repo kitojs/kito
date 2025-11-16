@@ -7,6 +7,12 @@ pub fn validate_string(
     value: &str,
     constraints: &[StringConstraint],
 ) -> Result<(), ValidationError> {
+    let uuid_regex = Regex::new(
+        r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+    )
+    .unwrap();
+    let email_regex = Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").unwrap();
+
     for constraint in constraints {
         match constraint {
             StringConstraint::Min { value: min } => {
@@ -34,9 +40,6 @@ pub fn validate_string(
                 }
             }
             StringConstraint::Email => {
-                let email_regex =
-                    Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").unwrap();
-
                 if !email_regex.is_match(value) {
                     return Err(ValidationError::new("", "Invalid email format"));
                 }
@@ -47,10 +50,6 @@ pub fn validate_string(
                 }
             }
             StringConstraint::Uuid => {
-                let uuid_regex = Regex::new(
-                    r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
-                ).unwrap();
-
                 if !uuid_regex.is_match(value) {
                     return Err(ValidationError::new("", "Invalid UUID format"));
                 }
@@ -249,14 +248,14 @@ pub fn validate_value(
                     if field_path.is_empty() { key.clone() } else { format!("{field_path}.{key}") };
                 let validated = validate_value(&field_value, field_schema, &new_path)?;
 
-                if !validated.is_null() {
-                    validated_obj.insert(key.clone(), validated);
-                } else if matches!(
-                    field_schema,
-                    SchemaType::String { optional: false, .. }
-                        | SchemaType::Number { optional: false, .. }
-                        | SchemaType::Boolean { optional: false, .. }
-                ) {
+                if !validated.is_null()
+                    || matches!(
+                        field_schema,
+                        SchemaType::String { optional: false, .. }
+                            | SchemaType::Number { optional: false, .. }
+                            | SchemaType::Boolean { optional: false, .. }
+                    )
+                {
                     validated_obj.insert(key.clone(), validated);
                 }
             }

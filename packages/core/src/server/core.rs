@@ -49,6 +49,16 @@ impl ServerCore {
         insert_route(route)
     }
 
+    /// Start the HTTP server and execute the `ready` callback if provided.
+    ///
+    /// # Safety
+    ///
+    /// This function is unsafe because it exposes logic that will be called from JavaScript via N-API, and depends on:
+    /// - The `ServerCore` object remains alive while async tasks are running.
+    /// - The `ThreadsafeFunction` passed (if it exists) is valid and has not been released.
+    /// - `start` is not called twice simultaneously on the same instance.
+    ///
+    /// The caller must guarantee these conditions.
     #[napi(ts_args_type = "ready: (() => void) | undefined")]
     pub async unsafe fn start(&mut self, ready: Option<ThreadsafeFunction<()>>) {
         let (shutdown_tx, mut shutdown_rx) = watch::channel::<()>(());

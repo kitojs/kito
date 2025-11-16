@@ -9,6 +9,12 @@ pub struct TrieRouter {
     inner: MatchitRouter<Arc<CompiledRoute>>,
 }
 
+impl Default for TrieRouter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TrieRouter {
     pub fn new() -> Self {
         Self { inner: MatchitRouter::new() }
@@ -26,6 +32,12 @@ impl TrieRouter {
 pub struct HttpRouter {
     static_routes: AHashMap<Box<str>, Arc<CompiledRoute>>,
     dynamic_routes: TrieRouter,
+}
+
+impl Default for HttpRouter {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl HttpRouter {
@@ -77,6 +89,12 @@ pub struct GlobalRouter {
     routers: RwLock<AHashMap<Box<str>, HttpRouter>>,
 }
 
+impl Default for GlobalRouter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GlobalRouter {
     pub fn new() -> Self {
         Self { routers: RwLock::new(AHashMap::new()) }
@@ -85,7 +103,7 @@ impl GlobalRouter {
     pub fn insert(&self, method: &str, route: CompiledRoute) -> Result<(), String> {
         let mut routers = self.routers.write();
         let router =
-            routers.entry(method.to_string().into_boxed_str()).or_insert_with(HttpRouter::new);
+            routers.entry(method.to_string().into_boxed_str()).or_default();
 
         router.insert(route)
     }

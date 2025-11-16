@@ -30,26 +30,25 @@ pub async fn read_file_for_response(
             headers.extend(custom_headers.clone());
         }
 
-        if opts.last_modified.unwrap_or(true) {
-            if let Ok(modified) = metadata.modified() {
-                if let Ok(duration) = modified.duration_since(UNIX_EPOCH) {
-                    headers.insert(
-                        "Last-Modified".to_string(),
-                        httpdate::fmt_http_date(UNIX_EPOCH + duration),
-                    );
-                }
-            }
+        if opts.last_modified.unwrap_or(true)
+            && let Ok(modified) = metadata.modified()
+            && let Ok(duration) = modified.duration_since(UNIX_EPOCH)
+        {
+            headers.insert(
+                "Last-Modified".to_string(),
+                httpdate::fmt_http_date(UNIX_EPOCH + duration),
+            );
         }
 
-        if opts.cache_control.unwrap_or(true) {
-            if let Some(max_age) = opts.max_age {
-                let cache_value = if opts.immutable.unwrap_or(false) {
-                    format!("public, max-age={max_age}, immutable")
-                } else {
-                    format!("public, max-age={max_age}")
-                };
-                headers.insert("Cache-Control".to_string(), cache_value);
-            }
+        if opts.cache_control.unwrap_or(true)
+            && let Some(max_age) = opts.max_age
+        {
+            let cache_value = if opts.immutable.unwrap_or(false) {
+                format!("public, max-age={max_age}, immutable")
+            } else {
+                format!("public, max-age={max_age}")
+            };
+            headers.insert("Cache-Control".to_string(), cache_value);
         }
 
         if opts.accept_ranges.unwrap_or(true) {

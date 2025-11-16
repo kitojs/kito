@@ -151,6 +151,6 @@ pub fn insert_route(route: Route) -> napi::Result<()> {
         schema,
     };
 
-    ROUTER.insert(&route.method, compiled).map_err(|e| Error::from_reason(e))?;
+    ROUTER.insert(&route.method, compiled).map_err(Error::from_reason)?;
     Ok(())
 }
