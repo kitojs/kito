@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "description": "Internal logic (core) of the Kito framework written in Rust.",
   "scripts": {
-    "build": "napi build --platform --release --esm --const-enum --output-dir dist"
+    "build": "napi build --platform --release --esm --const-enum --output-dir dist",
+    "test": "cargo test"
   },
 
   "dependencies": {},
