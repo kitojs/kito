@@ -1,0 +1,44 @@
+{
+  "name": "@kitojs/cli",
+  "version": "1.0.0",
+  "description": "🍄 Kito's official CLI.",
+  "bin": {
+    "kito": "bin/kito"
+  },
+
+  "scripts": {
+    "postinstall": "node install.js"
+  },
+
+  "keywords": [],
+
+  "homepage": "https://github.com/kitojs/kito",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kitojs/kito.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kitojs/kito/issues"
+  },
+
+  "license": "MIT",
+  "author": "Nehuén <github.com/nehu3n>",
+
+  "main": "bin/kito",
+
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ],
+
+  "files": [
+    "bin/",
+    "install.js",
+    "readme.md"
+  ]
+}

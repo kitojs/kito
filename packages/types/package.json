@@ -1,0 +1,43 @@
+{
+  "name": "@kitojs/types",
+  "version": "1.0.0",
+  "description": "TypeScript types for the Kito framework.",
+  "scripts": {
+    "build": "tsdown"
+  },
+
+  "dependencies": {},
+  "devDependencies": {
+    "tsdown": "^0.15.0"
+  },
+
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kitojs/kito.git"
+  },
+  "homepage": "https://kito.pages.dev",
+  "bugs": {
+    "url": "https://github.com/kitojs/kito/issues"
+  },
+
+  "license": "MIT",
+  "author": {
+    "name": "Nehuén",
+    "url": "https://github.com/nehu3n"
+  },
+
+  "type": "module",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.d.ts"
+    }
+  },
+
+  "files": [
+    "dist",
+    "readme.md",
+    "package.json"
+  ]
+}

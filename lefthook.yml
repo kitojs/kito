@@ -1,0 +1,187 @@
+skip_output:
+  - meta
+  - summary
+
+pre-commit:
+  parallel: true
+  commands:
+    # Rust commands
+    fmt-check:
+      tags: rust formatter
+      run: cargo fmt --all -- --check
+      fail_text: "Code is not formatted. Run 'cargo fmt' to fix."
+
+    clippy:
+      tags: rust linter
+      run: cargo clippy --all-targets --all-features -- -D warnings
+      fail_text: "Linting failed. Fix clippy warnings."
+
+    check:
+      tags: rust compile
+      run: cargo check --all-targets --all-features
+      fail_text: "Code doesn't compile. Fix compilation errors."
+
+    # TypeScript commands
+    biome-check:
+      tags: js formatter linter
+      glob: "*.{js,ts,tsx,json,jsonc}"
+      run: pnpm biome check --write {staged_files}
+      stage_fixed: true
+      fail_text: "JS/TS formatting/linting failed. Fix biome issues."
+
+    
+    # ts-typecheck:
+      # tags: typescript checker
+      # glob: "*.{ts,tsx}"
+      # run: pnpm tsc --noEmit
+      # fail_text: "TypeScript type checking failed. Fix type errors."
+
+pre-push:
+  parallel: false
+  commands:
+    # Rust tests
+    test:
+      tags: rust test
+      run: cargo test --all-features
+      fail_text: "Rust tests failed. Fix failing tests before pushing."
+
+    # Security audits
+    audit:
+      tags: rust security
+      run: cargo audit
+      fail_text: "Security vulnerabilities found. Run 'cargo audit fix' or update dependencies."
+      skip:
+        - merge
+        - rebase
+
+    npm-audit:
+      tags: npm security
+      run: pnpm audit --audit-level moderate
+      fail_text: "NPM security vulnerabilities found. Run 'pnpm audit --fix'."
+      skip:
+        - merge
+        - rebase
+
+prepare-commit-msg:
+  commands:
+    conventional-commits-prepare:
+      tags: commit-msg
+      run: |
+        # This hook runs before the commit message is created
+        # We can use it to prepare or validate the template
+        echo "📝 Preparing commit message validation..."
+        echo "Remember to use Conventional Commits format: <type>[optional scope]: <description>"
+
+commit-msg:
+  commands:
+    conventional-commits:
+      tags: commit-msg
+      run: |
+        #!/bin/sh
+
+        # Try to extract commit message
+        commit_msg=""
+
+        # 1. Argument (standard for commit-msg hook)
+        if [ -n "$1" ] && [ -f "$1" ]; then
+          commit_msg="$(head -n 1 "$1" | tr -d '\r\n')"
+        fi
+
+        # 2. Lefthook-provided variable
+        if [ -z "$commit_msg" ] && [ -n "$LEFTHOOK_COMMIT_MSG" ]; then
+          commit_msg="$(echo "$LEFTHOOK_COMMIT_MSG" | head -n 1 | tr -d '\r\n')"
+        fi
+
+        # 3. Git fallback
+        if [ -z "$commit_msg" ] && [ -f ".git/COMMIT_EDITMSG" ]; then
+          commit_msg="$(head -n 1 .git/COMMIT_EDITMSG | tr -d '\r\n')"
+        fi
+
+        # Skip empty or comment-only messages
+        if [ -z "$commit_msg" ] || echo "$commit_msg" | grep -qE '^#'; then
+          echo "⚠️  Empty commit message or comment, skipping validation."
+          exit 0
+        fi
+
+        echo "🔍 Validating commit message: \"$commit_msg\""
+
+        # Check Conventional Commit pattern
+        if ! echo "$commit_msg" | grep -qE '^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([^)]+\))?: .{1,50}$'; then
+          echo "❌ Invalid commit message format!"
+          echo "Format: <type>[optional scope]: <description>"
+          echo "Types: build, chore, ci, docs, feat, fix, perf, refactor, revert, style, test"
+          echo "Example: feat(auth): add login functionality"
+          echo "Your message: \"$commit_msg\""
+          exit 1
+        fi
+
+        # Length check
+        if [ "${#commit_msg}" -gt 72 ]; then
+          echo "❌ Commit message too long! Keep it under 72 characters."
+          echo "Length: ${#commit_msg}"
+          echo "Your message: \"$commit_msg\""
+          exit 1
+        fi
+
+        # Imperative mood check
+        description="$(echo "$commit_msg" | sed -E 's/^[a-z]+(\([^)]+\))?: //')"
+        if echo "$description" | grep -qE '^(added|fixed|updated|changed|removed|created)'; then
+          echo "⚠️  Use imperative mood (add, fix, update), not past tense"
+          echo "Example: 'feat: add auth' not 'feat: added auth'"
+          echo "Your message: \"$commit_msg\""
+          exit 1
+        fi
+
+        echo "✅ Commit message is valid!"
+      fail_text: "Commit message doesn't follow Conventional Commits specification."
+
+post-checkout:
+  commands:
+    cargo-update:
+      tags: rust dependencies
+      files: git diff --name-only HEAD@{1} HEAD
+      glob: "{Cargo.toml,Cargo.lock}"
+      run: |
+        echo "🔄 Cargo files changed, updating dependencies..."
+        cargo check
+      skip:
+        - merge
+        - rebase
+
+    npm-install:
+      tags: npm dependencies
+      files: git diff --name-only HEAD@{1} HEAD
+      glob: "{package.json,pnpm-lock.yaml,pnpm-workspace.yaml}"
+      run: |
+        echo "🔄 NPM files changed, updating dependencies..."
+        pnpm install
+      skip:
+        - merge
+        - rebase
+
+post-merge:
+  commands:
+    cargo-check:
+      tags: rust post-merge
+      run: |
+        echo "🔄 Running cargo check after merge..."
+        cargo check
+        echo "✅ Rust dependencies updated successfully"
+
+    npm-check:
+      tags: npm post-merge
+      run: |
+        echo "🔄 Running npm check after merge..."
+        pnpm install --frozen-lockfile
+        echo "✅ NPM dependencies updated successfully"
+
+colors: true
+no_tty: false
+source_dir: ".lefthook"
+source_dir_local: ".lefthook-local"
+
+output:
+  - execution
+  - execution_out
+  - execution_info
+  - skips

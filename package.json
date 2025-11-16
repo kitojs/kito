@@ -1,27 +1,29 @@
 {
   "name": "kito",
   "version": "1.0.0",
-  "type": "module",
-  "description": "A web framework written in Rust for TypeScript",
-  "readme": "README.md",
-  "repository": "https://github.com/nehu3n/kito",
-  "homepage": "https://kito.pages.dev",
-  "bugs": "https://github.com/nehu3n/kito/issues",
-  "main": "index.js",
-  "keywords": [],
-  "author": "Nehuén <https://github.com/nehu3n>",
-  "license": "MIT",
+  "description": "The Kito's workspace.",
   "scripts": {
-    "fmt:prettier": "prettier --config .prettierrc -w .",
-    "bench": "node bench/start.js",
-    "postinstall": "node scripts/postinstall.mjs"
+    "fmt": "biome format",
+    "fmt:fix": "biome format --write",
+    "lint": "biome lint",
+    "lint:fix": "biome lint --write",
+    "check": "biome check",
+    "check:fix": "biome check --write",
+
+    "build": "pnpm -r build",
+    "core:build": "pnpm --filter @kitojs/kito-core build",
+    "ts:build": "pnpm --filter @kitojs/types build && pnpm --filter kitojs build",
+
+    "dev": "pnpm -r dev",
+
+    "ex:run": "pnpm --filter examples ex:run",
+    "bench:run": "pnpm --filter bench bench:run"
   },
-  "dependencies": {
-    "msgpackr": "^1.11.2"
-  },
+  "author": "Nehuén <github.com/nehu3n>",
+  "license": "MIT",
   "devDependencies": {
-    "@types/deno": "^2.2.0",
-    "@types/node": "^22.13.9",
-    "prettier": "3.4.2"
+    "@biomejs/biome": "2.2.3",
+    "@types/node": "^24.5.2",
+    "typescript": "^5.9.2"
   }
 }

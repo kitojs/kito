@@ -1,135 +1,172 @@
-name: (Rust) Release Build and Publish
-
-permissions:
-  contents: write
-  pull-requests: read
+name: Release
 
 on:
   push:
     tags:
       - 'v*'
-  pull_request:
-    paths:
-      - '**/*.rs'
-      - '**/Cargo.toml'
-      - '**/Cargo.lock'
-      - '**/flake.nix'
-      - '**/*.nix'
-  workflow_dispatch:
-    inputs:
-      release_name:
-        description: 'Name of release (optional)'
-        required: false
-        default: ''
-      create_release:
-        description: 'Create a GitHub release? (true/false)'
-        required: false
-        default: 'false'
 
 jobs:
-  generate-matrix:
-    runs-on: ubuntu-latest
-    outputs:
-      matrix: ${{ steps.generate-matrix.outputs.matrix }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Nix
-        uses: cachix/install-nix-action@v30
-        with:
-          nix_path: nixpkgs=channel:nixos-unstable
-          github_access_token: ${{ secrets.GITHUB_TOKEN }}
-          extra_nix_config: |
-            experimental-features = nix-command flakes
-
-      - name: Generate matrix
-        id: generate-matrix
-        run: |
-          MATRIX=$(nix run .#matrix --quiet)
-          echo "Generated Matrix:"
-          echo "$MATRIX"
-          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
-
-  build:
-    runs-on: ubuntu-latest
-    needs: generate-matrix
+  build-napi:
+    name: Build NAPI - ${{ matrix.settings.target }}
+    runs-on: ${{ matrix.settings.os }}
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
-    env:
-      LIB_NAME: 'libkito-${{ matrix.os }}-${{ matrix.arch }}'
+        settings:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            build: pnpm core:build
+          
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            build: pnpm core:build --target x86_64-unknown-linux-musl
+          
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            build: pnpm core:build --target aarch64-unknown-linux-gnu
+          
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            build: pnpm core:build --target aarch64-unknown-linux-musl
+          
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            build: pnpm core:build
+          
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            build: pnpm core:build --target aarch64-apple-darwin
+          
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            build: pnpm core:build
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Install Nix
-        uses: cachix/install-nix-action@v30
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          nix_path: nixpkgs=channel:nixos-unstable
-          github_access_token: ${{ secrets.GITHUB_TOKEN }}
-          extra_nix_config: |
-            experimental-features = nix-command flakes
+          node-version: '20'
 
-      - name: Build with Nix
-        run: |
-          echo "Building for ${{ matrix.os }}-${{ matrix.arch }}..."
-          nix build ".#${{ matrix.os }}-${{ matrix.arch }}"
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8
 
-          case "${{ matrix.os }}" in
-            linux) EXT=".so" ;;
-            macos) EXT=".dylib" ;;
-            windows) EXT=".dll" ;;
-            *) echo "Unsupported OS: ${{ matrix.os }}"; exit 1 ;;
-          esac
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          target: ${{ matrix.settings.target }}
 
-          mkdir -p dist
-          cp result/lib/* dist/${{ env.LIB_NAME }}$EXT
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
-      - name: Upload Library as artifact
+      - name: Build NAPI binary
+        run: ${{ matrix.settings.build }}
+        working-directory: packages/core
+
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: libkito-${{ matrix.os }}-${{ matrix.arch }}
-          path: dist/*
+          name: bindings-${{ matrix.settings.target }}
+          path: packages/core/dist/*.node
+          if-no-files-found: error
 
-  create-release:
+  publish-npm:
+    name: Publish to NPM
     runs-on: ubuntu-latest
-    needs: build
-    if: ${{ github.event.inputs.create_release == 'true' || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) }}
+    needs: build-napi
+    
     steps:
-      - uses: actions/checkout@v4
-      - name: Generate a changelog
-        uses: orhun/git-cliff-action@v4
-        id: git-cliff
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          config: cliff.toml
-          args: --latest
-        env:
-          OUTPUT: CHANGES.md
-          GITHUB_REPO: ${{ github.repository }}
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
 
-      - name: Get release name
-        id: release_name
-        run: |
-          if [ -n "${{ github.event.inputs.release_name }}" ]; then
-            echo "RELEASE_NAME=${{ github.event.inputs.release_name }}" >> $GITHUB_OUTPUT
-          else
-            echo "RELEASE_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-          fi
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8
 
-      - name: Download Libraries
+      - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          path: libs
+          path: packages/core/dist
+
+      - name: Move artifacts to correct location
+        run: |
+          for dir in packages/core/dist/bindings-*; do
+            if [ -d "$dir" ]; then
+              mv "$dir"/*.node packages/core/dist/ 2>/dev/null || true
+            fi
+          done
+          rm -rf packages/core/dist/bindings-*
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build TypeScript packages
+        run: pnpm ts:build
+
+      - name: Publish @kitojs/kito-core
+        run: pnpm publish --access public --no-git-checks
+        working-directory: packages/core
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @kitojs/types
+        run: pnpm publish --access public --no-git-checks
+        working-directory: packages/types
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish kitojs
+        run: pnpm publish --access public --no-git-checks
+        working-directory: packages/kitojs
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: publish-npm
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          make_latest: true
-          prerelease: ${{ steps.release_name.outputs.release_name != '' && contains(steps.release_name.outputs.release_name, 'a') }}
-          tag_name: ${{ steps.release_name.outputs.release_name }}
-          name: ${{ steps.release_name.outputs.release_name }}
-          body: ${{ steps.git-cliff.outputs.content }}
-          files: |
-            libs/*
-            CHANGES.md
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: |
+            ## 🐺 Kito ${{ steps.version.outputs.VERSION }}
+            
+            ### Installation
+            ```bash
+            npm install kitojs@${{ steps.version.outputs.VERSION }}
+            # or
+            pnpm add kitojs@${{ steps.version.outputs.VERSION }}
+            ```
+            
+            ### What's Changed
+            See the [changelog](https://github.com/kitojs/kito/blob/main/CHANGELOG.md) for details.
+            
+            ### Documentation
+            Visit [kito.pages.dev](https://kito.pages.dev) for full documentation.
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,58 @@
+{
+  "name": "kitojs",
+  "version": "1.0.0",
+  "description": "🐺 The high-performance, type-safe and modern TypeScript web framework written in Rust.",
+  "scripts": {
+    "build": "tsdown",
+
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+
+  "dependencies": {
+    "@kitojs/kito-core": "workspace:*",
+    "acorn": "^8.15.0",
+    "acorn-walk": "^8.3.4"
+  },
+  "devDependencies": {
+    "@kitojs/types": "workspace:*",
+    "@vitest/coverage-v8": "^4.0.9",
+    "tsdown": "^0.15.0",
+    "vitest": "^4.0.9"
+  },
+  "peerDependencies": {
+    "typescript": "^5.9.2"
+  },
+
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kitojs/kito.git"
+  },
+  "homepage": "https://kito.pages.dev",
+  "bugs": {
+    "url": "https://github.com/kitojs/kito/issues"
+  },
+
+  "license": "MIT",
+  "author": {
+    "name": "Nehuén",
+    "url": "https://github.com/nehu3n"
+  },
+
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+
+  "files": [
+    "dist",
+    "readme.md",
+    "package.json"
+  ]
+}
