@@ -22,14 +22,7 @@
 
 ## 🚀 Quick Start
 
-Install the official [**Kito CLI**](/cli) to scaffold and manage projects easily:
-
-```bash
-npm i -g @kitojs/cli
-kito new hello
-````
-
-Or install Kito directly:
+You can add **Kito** to a project as follows:
 
 ```bash
 pnpm add kitojs   # Or: npm i kitojs
@@ -39,7 +32,6 @@ pnpm add kitojs   # Or: npm i kitojs
 
 ```ts
 import { server } from "kitojs";
-
 const app = server();
 
 app.get("/", ctx => {
