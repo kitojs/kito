@@ -1,0 +1,72 @@
+name: Deploy Docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/kitojs/src/**'
+  workflow_dispatch:
+
+jobs:
+  deploy-docs:
+    name: Generate and Deploy API Docs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout kito repo
+        uses: actions/checkout@v4
+        with:
+          path: kito
+
+      - name: Checkout web repo
+        uses: actions/checkout@v4
+        with:
+          repository: kitojs/web
+          token: ${{ secrets.WEB_REPO_TOKEN }}
+          path: web
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8
+
+      - name: Install kito dependencies
+        run: pnpm install -r
+        working-directory: kito
+
+      - name: Build kito packages
+        run: pnpm build
+        working-directory: kito
+
+      - name: Generate TypeDoc
+        run: pnpm docs
+        working-directory: kito
+
+      - name: Copy docs to web repo
+        run: |
+          # Remove old API docs if they exist
+          rm -rf web/public/api
+          
+          # Copy new generated docs
+          mkdir -p web/public/api
+          cp -r kito/docs/* web/public/api/
+
+      - name: Commit and push to web repo
+        working-directory: web
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add public/api
+          
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "docs: update API documentation"
+            git push
+          fi

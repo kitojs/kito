@@ -17,6 +17,23 @@ import { ResponseBuilder } from "./response";
 
 import { analyzeHandler, type StaticResponseType } from "./analyzer";
 
+/**
+ * Main server class for Kito framework.
+ * Provides HTTP routing, middleware support, and context extensions.
+ *
+ * @template TExtensions - Type of custom extensions added to the context
+ *
+ * @example
+ * ```typescript
+ * const app = new KitoServer();
+ *
+ * app.get('/', ctx => {
+ *   ctx.res.send('Hello World!');
+ * });
+ *
+ * app.listen(3000);
+ * ```
+ */
 // biome-ignore lint/complexity/noBannedTypes: ...
 export class KitoServer<TExtensions = {}>
   implements KitoServerInstance<TExtensions>
@@ -28,6 +45,16 @@ export class KitoServer<TExtensions = {}>
   // biome-ignore lint/suspicious/noExplicitAny: ...
   private extensionFn?: (ctx: any) => void;
 
+  /**
+   * Creates a new Kito server instance.
+   *
+   * @param options - Server configuration options
+   * @param options.port - Port to listen on (default: 3000)
+   * @param options.host - Host to bind to (default: "0.0.0.0")
+   * @param options.trustProxy - Trust X-Forwarded-* headers
+   * @param options.maxRequestSize - Maximum request body size in bytes
+   * @param options.timeout - Request timeout in milliseconds
+   */
   constructor(options?: ServerOptions) {
     this.serverOptions = { ...this.serverOptions, ...options };
     this.coreServer = new ServerCore({
@@ -37,6 +64,29 @@ export class KitoServer<TExtensions = {}>
     });
   }
 
+  /**
+   * Extends the request context with custom properties or methods.
+   *
+   * @template TNewExtensions - Type of the new extensions
+   * @param fn - Function that adds extensions to the context
+   * @returns A new server instance with extended context type
+   *
+   * @example
+   * ```typescript
+   * interface Database {
+   *   query: (sql: string) => Promise<any>;
+   * }
+   *
+   * const app = server().extend<{ db: Database }>(ctx => {
+   *   ctx.db = createDatabase();
+   * });
+   *
+   * app.get('/users', ctx => {
+   *   const users = await ctx.db.query('SELECT * FROM users');
+   *   ctx.res.json(users);
+   * });
+   * ```
+   */
   extend<TNewExtensions = unknown>(
     fn: (
       ctx: KitoContext & TExtensions & Partial<TNewExtensions>,
@@ -67,6 +117,20 @@ export class KitoServer<TExtensions = {}>
     return newServer;
   }
 
+  /**
+   * Registers a global middleware that runs for all routes.
+   *
+   * @param middleware - Middleware function or definition
+   * @returns The server instance for chaining
+   *
+   * @example
+   * ```typescript
+   * app.use((ctx, next) => {
+   *   console.log(`${ctx.req.method} ${ctx.req.url}`);
+   *   next();
+   * });
+   * ```
+   */
   use(
     middleware: MiddlewareDefinition | MiddlewareHandler,
   ): KitoServer<TExtensions> {
@@ -83,11 +147,35 @@ export class KitoServer<TExtensions = {}>
     return this as KitoServer<TExtensions>;
   }
 
+  /**
+   * Registers a GET route.
+   *
+   * @template TSchema - Request schema type
+   * @param path - Route path (supports :params)
+   * @param handler - Route handler function
+   * @returns The server instance for chaining
+   *
+   * @example
+   * ```typescript
+   * app.get('/users/:id', ctx => {
+   *   ctx.res.json({ id: ctx.req.params.id });
+   * });
+   * ```
+   */
   // biome-ignore lint/complexity/noBannedTypes: ...
   get<TSchema extends SchemaDefinition = {}>(
     path: string,
     handler: RouteHandler<TSchema, TExtensions>,
   ): KitoServer<TExtensions>;
+  /**
+   * Registers a GET route with middlewares and/or schema validation.
+   *
+   * @template TSchema - Request schema type
+   * @param path - Route path
+   * @param middlewares - Array of middlewares and/or schema definition
+   * @param handler - Route handler function
+   * @returns The server instance for chaining
+   */
   // biome-ignore lint/complexity/noBannedTypes: ...
   get<TSchema extends SchemaDefinition = {}>(
     path: string,
@@ -107,6 +195,14 @@ export class KitoServer<TExtensions = {}>
     return this as KitoServer<TExtensions>;
   }
 
+  /**
+   * Registers a POST route.
+   *
+   * @template TSchema - Request schema type
+   * @param path - Route path
+   * @param handler - Route handler function
+   * @returns The server instance for chaining
+   */
   // biome-ignore lint/complexity/noBannedTypes: ...
   post<TSchema extends SchemaDefinition = {}>(
     path: string,
@@ -131,6 +227,14 @@ export class KitoServer<TExtensions = {}>
     return this as KitoServer<TExtensions>;
   }
 
+  /**
+   * Registers a PUT route.
+   *
+   * @template TSchema - Request schema type
+   * @param path - Route path
+   * @param handler - Route handler function
+   * @returns The server instance for chaining
+   */
   // biome-ignore lint/complexity/noBannedTypes: ...
   put<TSchema extends SchemaDefinition = {}>(
     path: string,
@@ -155,6 +259,14 @@ export class KitoServer<TExtensions = {}>
     return this as KitoServer<TExtensions>;
   }
 
+  /**
+   * Registers a DELETE route.
+   *
+   * @template TSchema - Request schema type
+   * @param path - Route path
+   * @param handler - Route handler function
+   * @returns The server instance for chaining
+   */
   // biome-ignore lint/complexity/noBannedTypes: ...
   delete<TSchema extends SchemaDefinition = {}>(
     path: string,
@@ -179,6 +291,14 @@ export class KitoServer<TExtensions = {}>
     return this as KitoServer<TExtensions>;
   }
 
+  /**
+   * Registers a PATCH route.
+   *
+   * @template TSchema - Request schema type
+   * @param path - Route path
+   * @param handler - Route handler function
+   * @returns The server instance for chaining
+   */
   // biome-ignore lint/complexity/noBannedTypes: ...
   patch<TSchema extends SchemaDefinition = {}>(
     path: string,
@@ -203,6 +323,14 @@ export class KitoServer<TExtensions = {}>
     return this as KitoServer<TExtensions>;
   }
 
+  /**
+   * Registers a HEAD route.
+   *
+   * @template TSchema - Request schema type
+   * @param path - Route path
+   * @param handler - Route handler function
+   * @returns The server instance for chaining
+   */
   // biome-ignore lint/complexity/noBannedTypes: ...
   head<TSchema extends SchemaDefinition = {}>(
     path: string,
@@ -227,6 +355,14 @@ export class KitoServer<TExtensions = {}>
     return this as KitoServer<TExtensions>;
   }
 
+  /**
+   * Registers an OPTIONS route.
+   *
+   * @template TSchema - Request schema type
+   * @param path - Route path
+   * @param handler - Route handler function
+   * @returns The server instance for chaining
+   */
   // biome-ignore lint/complexity/noBannedTypes: ...
   options<TSchema extends SchemaDefinition = {}>(
     path: string,
@@ -251,6 +387,20 @@ export class KitoServer<TExtensions = {}>
     return this as KitoServer<TExtensions>;
   }
 
+  /**
+   * Creates a route builder for chaining multiple HTTP methods on the same path.
+   *
+   * @param path - Base path for all routes in the chain
+   * @returns Route chain builder
+   *
+   * @example
+   * ```typescript
+   * app.route('/api/users')
+   *   .get(ctx => ctx.res.json(users))
+   *   .post(ctx => ctx.res.json({ created: true }))
+   *   .end();
+   * ```
+   */
   route(path: string): RouteChain<TExtensions> {
     const self = this;
 
@@ -488,6 +638,33 @@ export class KitoServer<TExtensions = {}>
     return item && (item.params || item.query || item.body || item.headers);
   }
 
+  /**
+   * Starts the HTTP server and begins listening for requests.
+   *
+   * @param portOrCallback - Port number or ready callback
+   * @param hostOrCallback - Host string or ready callback
+   * @param maybeCallback - Ready callback
+   * @returns Promise resolving to server configuration
+   *
+   * @example
+   * ```typescript
+   * // Empty
+   * await app.listen();
+   *
+   * // Simple
+   * await app.listen(3000);
+   *
+   * // With callback
+   * await app.listen(3000, () => {
+   *   console.log('Server ready!');
+   * });
+   *
+   * // With port and host
+   * await app.listen(3000, '127.0.0.1', () => {
+   *   console.log('Server ready on 127.0.0.1:3000');
+   * });
+   * ```
+   */
   async listen(
     portOrCallback?: number | (() => void),
     hostOrCallback?: string | (() => void),
@@ -524,11 +701,33 @@ export class KitoServer<TExtensions = {}>
     return configuration;
   }
 
+  /**
+   * Closes the server and stops accepting new connections.
+   */
   close(): void {
     this.coreServer.close();
   }
 }
 
+/**
+ * Creates a new Kito server instance.
+ *
+ * @param options - Server configuration options
+ * @returns New server instance
+ *
+ * @example
+ * ```typescript
+ * import { server } from 'kitojs';
+ *
+ * const app = server();
+ *
+ * app.get('/', ctx => {
+ *   ctx.res.send('Hello World!');
+ * });
+ *
+ * app.listen(3000);
+ * ```
+ */
 // biome-ignore lint/complexity/noBannedTypes: ...
 export function server(options?: ServerOptions): KitoServer<{}> {
   return new KitoServer(options);

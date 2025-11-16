@@ -5,5 +5,3 @@ packages:
 
 onlyBuiltDependencies:
   - skia-canvas
-
-neverBuiltDependencies: []
