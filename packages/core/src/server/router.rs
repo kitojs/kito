@@ -102,8 +102,7 @@ impl GlobalRouter {
 
     pub fn insert(&self, method: &str, route: CompiledRoute) -> Result<(), String> {
         let mut routers = self.routers.write();
-        let router =
-            routers.entry(method.to_string().into_boxed_str()).or_default();
+        let router = routers.entry(method.to_string().into_boxed_str()).or_default();
 
         router.insert(route)
     }

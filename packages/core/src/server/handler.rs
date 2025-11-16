@@ -80,36 +80,38 @@ pub async fn handle_request(
 
     if let Some(schema) = &route.schema {
         if let Some(params_schema) = &schema.params
-            && let Err(e) = parse_params(&req_core.params, params_schema) {
-                let error_msg = format!("Validation error in {}: {}", e.field, e.message);
-                return Ok(Response::builder()
-                    .status(400)
-                    .header("Content-Type", "application/json")
-                    .body(Full::new(Bytes::from(
-                        json!({
-                            "error": "Validation Error",
-                            "message": error_msg
-                        })
-                        .to_string(),
-                    )))
-                    .unwrap());
-            }
+            && let Err(e) = parse_params(&req_core.params, params_schema)
+        {
+            let error_msg = format!("Validation error in {}: {}", e.field, e.message);
+            return Ok(Response::builder()
+                .status(400)
+                .header("Content-Type", "application/json")
+                .body(Full::new(Bytes::from(
+                    json!({
+                        "error": "Validation Error",
+                        "message": error_msg
+                    })
+                    .to_string(),
+                )))
+                .unwrap());
+        }
 
         if let Some(query_schema) = &schema.query
-            && let Err(e) = parse_query(&req_core.query_raw, query_schema) {
-                let error_msg = format!("Validation error in {}: {}", e.field, e.message);
-                return Ok(Response::builder()
-                    .status(400)
-                    .header("Content-Type", "application/json")
-                    .body(Full::new(Bytes::from(
-                        json!({
-                            "error": "Validation Error",
-                            "message": error_msg
-                        })
-                        .to_string(),
-                    )))
-                    .unwrap());
-            }
+            && let Err(e) = parse_query(&req_core.query_raw, query_schema)
+        {
+            let error_msg = format!("Validation error in {}: {}", e.field, e.message);
+            return Ok(Response::builder()
+                .status(400)
+                .header("Content-Type", "application/json")
+                .body(Full::new(Bytes::from(
+                    json!({
+                        "error": "Validation Error",
+                        "message": error_msg
+                    })
+                    .to_string(),
+                )))
+                .unwrap());
+        }
 
         if let Some(body_schema) = &schema.body {
             let has_body_method = matches!(method.as_str(), "POST" | "PUT" | "PATCH" | "DELETE");
@@ -148,20 +150,21 @@ pub async fn handle_request(
         }
 
         if let Some(headers_schema) = &schema.headers
-            && let Err(e) = parse_headers(&req_core.headers_raw, headers_schema) {
-                let error_msg = format!("Validation error in {}: {}", e.field, e.message);
-                return Ok(Response::builder()
-                    .status(400)
-                    .header("Content-Type", "application/json")
-                    .body(Full::new(Bytes::from(
-                        json!({
-                            "error": "Validation Error",
-                            "message": error_msg
-                        })
-                        .to_string(),
-                    )))
-                    .unwrap());
-            }
+            && let Err(e) = parse_headers(&req_core.headers_raw, headers_schema)
+        {
+            let error_msg = format!("Validation error in {}: {}", e.field, e.message);
+            return Ok(Response::builder()
+                .status(400)
+                .header("Content-Type", "application/json")
+                .body(Full::new(Bytes::from(
+                    json!({
+                        "error": "Validation Error",
+                        "message": error_msg
+                    })
+                    .to_string(),
+                )))
+                .unwrap());
+        }
     }
 
     let (response_tx, response_rx) = oneshot::channel();
