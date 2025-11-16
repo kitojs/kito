@@ -1,17 +1,13 @@
 [package]
-name = "kito" # cli
+name = "kito"                                  # cli
 version = "0.1.0"
 edition = "2024"
 authors = ["Nehuén <github.com/nehu3n>"]
-description = "🍄 Kito's official CLI."
+description = "🐺 Kito's official CLI."
 license = "MIT"
 repository = "https://github.com/kitojs/kito"
 readme = "readme.md"
-include = [
-    "src/*",
-    "Cargo.toml",
-    "readme.md",
-]
+include = ["src/*", "Cargo.toml", "readme.md"]
 
 [[bin]]
 name = "kito"
