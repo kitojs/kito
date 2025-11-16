@@ -1,6 +1,6 @@
 {
   "name": "@kitojs/kito-core",
-  "version": "1.0.0",
+  "version": "1.0.0-alpha.1",
   "description": "Internal logic (core) of the Kito framework written in Rust.",
   "scripts": {
     "build": "napi build --platform --release --esm --const-enum --output-dir dist",
