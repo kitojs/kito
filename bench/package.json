@@ -13,7 +13,6 @@
     "@hono/node-server": "^1.19.6",
     "@koa/router": "^14.0.0",
     "@tinyhttp/app": "^3.0.1",
-    "autocannon": "^8.0.0",
     "chart.js": "^4.5.1",
     "express": "^5.1.0",
     "fastify": "^5.6.1",
