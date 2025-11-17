@@ -10,7 +10,7 @@
     "check": "biome check",
     "check:fix": "biome check --write",
 
-    "build": "pnpm -r build",
+    "build": "pnpm core:build --platform && pnpm ts:build",
     "core:build": "pnpm --filter @kitojs/kito-core build",
     "ts:build": "pnpm --filter @kitojs/types build && pnpm --filter kitojs build",
 
