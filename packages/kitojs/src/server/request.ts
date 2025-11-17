@@ -30,7 +30,8 @@ export class RequestBuilder implements KitoRequest {
   // biome-ignore lint/suspicious/noExplicitAny: ...
   private core: any;
 
-  private _body?: Buffer;
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  private _body?: Buffer | JSON | {};
   private _headers?: Record<string, string>;
   private _query?: Record<string, string | string[]>;
   private _params?: Record<string, string>;
@@ -51,10 +52,23 @@ export class RequestBuilder implements KitoRequest {
     this.core = requestCore;
   }
 
-  get body(): Buffer {
-    if (!this._body) {
-      this._body = getBodyBuffer(this.core);
+  // biome-ignore lint/suspicious/noExplicitAny: ...
+  get body(): any {
+    if (this._body) return this._body;
+
+    const buf = getBodyBuffer(this.core);
+    const type = this.header("content-type") ?? "";
+
+    if (type.includes("application/json")) {
+      try {
+        this._body = JSON.parse(buf.toString("utf-8"));
+      } catch {
+        this._body = {};
+      }
+    } else {
+      this._body = buf;
     }
+
     return this._body;
   }
 
