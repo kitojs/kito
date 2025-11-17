@@ -13,37 +13,46 @@ on:
 jobs:
   build-napi:
     name: Build NAPI - ${{ matrix.settings.target }}
-    runs-on: ${{ matrix.settings.os }}
     strategy:
       fail-fast: false
       matrix:
         settings:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            build: pnpm core:build
-          
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
-            build: pnpm core:build
-          
-          - os: macos-latest
+          - host: macos-latest
             target: x86_64-apple-darwin
-            build: pnpm core:build
-          
-          - os: macos-latest
+            build: pnpm core:build --target x86_64-apple-darwin
+          - host: macos-latest
             target: aarch64-apple-darwin
-            build: pnpm core:build
-          
-          - os: windows-latest
+            build: pnpm core:build --target aarch64-apple-darwin
+          - host: windows-latest
             target: x86_64-pc-windows-msvc
-            build: pnpm core:build
-
+            build: pnpm core:build --target x86_64-pc-windows-msvc
+          - host: windows-latest
+            target: i686-pc-windows-msvc
+            build: pnpm core:build --target i686-pc-windows-msvc
+          - host: windows-latest
+            target: aarch64-pc-windows-msvc
+            build: pnpm core:build --target aarch64-pc-windows-msvc
+          - host: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            build: pnpm core:build --target x86_64-unknown-linux-gnu --use-napi-cross
+          - host: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            build: pnpm core:build --target x86_64-unknown-linux-musl -x
+          - host: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            build: pnpm core:build --target aarch64-unknown-linux-gnu --use-napi-cross
+          - host: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            build: pnpm core:build --target aarch64-unknown-linux-musl -x
+          - host: ubuntu-latest
+            target: armv7-unknown-linux-gnueabihf
+            build: pnpm core:build --target armv7-unknown-linux-gnueabihf --use-napi-cross
+    runs-on: ${{ matrix.settings.host }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
 
@@ -52,11 +61,32 @@ jobs:
         with:
           version: 8
 
-      - name: Setup Rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-          target: ${{ matrix.settings.target }}
+          targets: ${{ matrix.settings.target }}
+          components: clippy, rustfmt
+
+      - name: Install build dependencies (Linux only)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential musl-tools clang pkg-config libssl-dev
+
+      - name: Setup zig (required for musl / cargo-zigbuild)
+        if: ${{ contains(matrix.settings.target, 'musl') }}
+        uses: mlugg/setup-zig@v2
+        with:
+          version: '0.15.2'
+
+      - name: Install cargo-zigbuild (musl only)
+        if: ${{ contains(matrix.settings.target, 'musl') }}
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-zigbuild
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install dependencies
         run: pnpm install -r
@@ -64,19 +94,71 @@ jobs:
       - name: Build NAPI binary
         run: ${{ matrix.settings.build }}
         working-directory: .
+        shell: bash
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: bindings-${{ matrix.settings.target }}
           path: packages/core/dist
-          retention-days: 3
+          if-no-files-found: error
+
+  build-freebsd:
+    runs-on: ubuntu-latest
+    name: Build NAPI - FreeBSD
+    steps:
+      - uses: actions/checkout@v5
+      
+      - name: Build on FreeBSD
+        id: build
+        uses: cross-platform-actions/action@v0.30.0
+        env:
+          DEBUG: napi:*
+          RUSTUP_IO_THREADS: 1
+        with:
+          operating_system: freebsd
+          version: '14.3'
+          memory: 8G
+          cpu_count: 3
+          environment_variables: 'DEBUG RUSTUP_IO_THREADS'
+          shell: bash
+          run: |
+            sudo pkg install -y -f curl node libnghttp2 npm
+            sudo npm install -g corepack
+            curl https://sh.rustup.rs -sSf --output rustup.sh
+            sh rustup.sh -y --profile minimal --default-toolchain stable
+            sudo corepack enable
+            source "$HOME/.cargo/env"
+            echo "~~~~ rustc --version ~~~~"
+            rustc --version
+            echo "~~~~ node -v ~~~~"
+            node -v
+            echo "~~~~ pnpm --version ~~~~"
+            pnpm --version
+            pwd
+            ls -lah
+            whoami
+            env
+            freebsd-version
+            pnpm install -r --filter '!bench' --filter '!examples'
+            pnpm core:build
+            rm -rf node_modules
+            rm -rf target
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: bindings-x86_64-unknown-freebsd
+          path: packages/core/dist
+          if-no-files-found: error
 
   publish-npm:
     name: Publish to NPM
     runs-on: ubuntu-latest
-    needs: build-napi
-    
+    needs: 
+      - build-napi
+      - build-freebsd
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -168,5 +250,4 @@ jobs:
           draft: false
           prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
         env:
-          # normalmente funciona con GITHUB_TOKEN y los permissions arriba
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
