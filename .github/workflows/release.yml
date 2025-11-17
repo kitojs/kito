@@ -140,7 +140,7 @@ jobs:
             whoami
             env
             freebsd-version
-            pnpm install -r
+            pnpm install -r --filter '!bench' --filter '!examples'
             pnpm core:build
             rm -rf node_modules
             rm -rf target
