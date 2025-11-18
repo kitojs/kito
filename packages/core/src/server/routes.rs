@@ -56,10 +56,28 @@ pub enum ResponseStrategy {
     ParamTemplate { template: String, params: Vec<String>, headers: HashMap<String, String> },
 }
 
+fn convert_path_to_matchit_format(path: &str) -> String {
+    if !path.contains(':') {
+        return path.to_string();
+    }
+
+    let parts: Vec<&str> = path.split('/').collect();
+    let converted_parts: Vec<String> =
+        parts
+            .iter()
+            .map(|part| {
+                if part.starts_with(':') { format!("{{{}}}", &part[1..]) } else { part.to_string() }
+            })
+            .collect();
+
+    converted_parts.join("/")
+}
+
 pub fn insert_route(route: Route) -> napi::Result<()> {
     let method_key: Box<str> = route.method.clone().into_boxed_str();
-    let segments: Vec<Box<str>> = route
-        .path
+    let converted_path = convert_path_to_matchit_format(&route.path);
+
+    let segments: Vec<Box<str>> = converted_path
         .split('/')
         .filter(|s| !s.is_empty())
         .map(|s| s.to_string().into_boxed_str())
@@ -145,7 +163,7 @@ pub fn insert_route(route: Route) -> napi::Result<()> {
 
     let compiled = CompiledRoute {
         method: method_key.clone(),
-        path: route.path.clone().into_boxed_str(),
+        path: converted_path.into_boxed_str(),
         segments: segments.into_boxed_slice(),
         strategy,
         schema,

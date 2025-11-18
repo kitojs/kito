@@ -76,7 +76,7 @@ impl HttpRouter {
     }
 
     fn is_static_route(path: &str) -> bool {
-        !path.contains(':') && !path.contains('*')
+        !path.contains(':') && !path.contains('*') && !path.contains('{')
     }
 }
 
