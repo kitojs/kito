@@ -96,11 +96,15 @@ jobs:
         working-directory: .
         shell: bash
 
+      - name: List built files
+        run: ls -la packages/core/dist/
+        shell: bash
+
       - name: Upload artifact
         uses: actions/upload-artifact@v5
         with:
           name: bindings-${{ matrix.settings.target }}
-          path: packages/core/dist
+          path: packages/core/dist/*.node
           if-no-files-found: error
 
   build-freebsd:
@@ -149,7 +153,7 @@ jobs:
         uses: actions/upload-artifact@v5
         with:
           name: bindings-x86_64-unknown-freebsd
-          path: packages/core/dist
+          path: packages/core/dist/*.node
           if-no-files-found: error
 
   publish-npm:
@@ -174,27 +178,52 @@ jobs:
         with:
           version: 8
 
+      - name: Install dependencies
+        run: pnpm install -r
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          path: packages/core/dist
+          path: artifacts
 
-      - name: Move artifacts to correct location
+      - name: List all downloaded artifacts
         run: |
-          for dir in packages/core/dist/bindings-*; do
-            if [ -d "$dir" ]; then
-              mv "$dir"/* packages/core/dist/ 2>/dev/null || true
+          echo "-- Downloaded artifacts structure --"
+          ls -laR artifacts/
+
+      - name: Create dist directory for core
+        run: mkdir -p packages/core/dist
+
+      - name: Move all .node binaries to core dist
+        run: |
+          echo "-- Moving .node files --"
+          for artifact_dir in artifacts/bindings-*; do
+            if [ -d "$artifact_dir" ]; then
+              echo "Processing: $artifact_dir"
+              find "$artifact_dir" -name "*.node" -exec cp -v {} packages/core/dist/ \;
             fi
           done
-          rm -rf packages/core/dist/bindings-*
+          echo "-- Final dist contents --"
+          ls -la packages/core/dist/
 
-      - name: Install dependencies
-        run: pnpm install -r
-        working-directory: .
+      - name: Build NAPI index files
+        run: |
+          cd packages/core
+          pnpm napi build --platform --release --esm --const-enum --output-dir dist
+        shell: bash
+
+      - name: Verify core package structure
+        run: |
+          echo "-- Core package dist/ contents --"
+          ls -la packages/core/dist/
+          echo "-- Checking for required files --"
+          test -f packages/core/dist/index.js && echo "✓ index.js found" || echo "✗ index.js missing"
+          test -f packages/core/dist/index.d.ts && echo "✓ index.d.ts found" || echo "✗ index.d.ts missing"
+          echo "-- .node files --"
+          find packages/core/dist/ -name "*.node" -exec basename {} \;
 
       - name: Build TypeScript packages
         run: pnpm ts:build
-        working-directory: .
 
       - name: Publish @kitojs/kito-core
         run: pnpm publish --access public --no-git-checks
