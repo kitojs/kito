@@ -186,3 +186,5 @@ Found an issue with the benchmarks? Want to add a new framework?
 Licensed under the [MIT License](../license).
 
 ---
+
+[![blazingly fast](https://blazingly.fast/api/badge.svg?repo=kitojs%2Fkito)](https://blazingly.fast)
