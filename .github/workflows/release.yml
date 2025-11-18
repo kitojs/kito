@@ -199,8 +199,56 @@ jobs:
           echo "-- Moving .node files --"
           for artifact_dir in artifacts/bindings-*; do
             if [ -d "$artifact_dir" ]; then
-              echo "Processing: $artifact_dir"
-              find "$artifact_dir" -name "*.node" -exec cp -v {} packages/core/dist/ \;
+              target=$(basename "$artifact_dir" | sed 's/^bindings-//')
+              echo "Processing target: $target"
+
+              node_file=$(find "$artifact_dir" -name "*.node" -type f)
+              if [ -n "$node_file" ]; then
+                case "$target" in
+                  x86_64-apple-darwin)
+                    dest_name="core.darwin-x64.node"
+                    ;;
+                  aarch64-apple-darwin)
+                    dest_name="core.darwin-arm64.node"
+                    ;;
+                  x86_64-pc-windows-msvc)
+                    dest_name="core.win32-x64-msvc.node"
+                    ;;
+                  i686-pc-windows-msvc)
+                    dest_name="core.win32-ia32-msvc.node"
+                    ;;
+                  aarch64-pc-windows-msvc)
+                    dest_name="core.win32-arm64-msvc.node"
+                    ;;
+                  x86_64-unknown-linux-gnu)
+                    dest_name="core.linux-x64-gnu.node"
+                    ;;
+                  x86_64-unknown-linux-musl)
+                    dest_name="core.linux-x64-musl.node"
+                    ;;
+                  aarch64-unknown-linux-gnu)
+                    dest_name="core.linux-arm64-gnu.node"
+                    ;;
+                  aarch64-unknown-linux-musl)
+                    dest_name="core.linux-arm64-musl.node"
+                    ;;
+                  armv7-unknown-linux-gnueabihf)
+                    dest_name="core.linux-arm-gnueabihf.node"
+                    ;;
+                  x86_64-unknown-freebsd)
+                    dest_name="core.freebsd-x64.node"
+                    ;;
+                  *)
+                    echo "Warning: Unknown target $target, using generic name"
+                    dest_name="core.$target.node"
+                    ;;
+                esac
+                
+                echo "  Copying: $node_file -> packages/core/dist/$dest_name"
+                cp -v "$node_file" "packages/core/dist/$dest_name"
+              else
+                echo "  Warning: No .node file found in $artifact_dir"
+              fi
             fi
           done
           echo "-- Final dist contents --"
