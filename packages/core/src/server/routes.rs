@@ -62,13 +62,16 @@ fn convert_path_to_matchit_format(path: &str) -> String {
     }
 
     let parts: Vec<&str> = path.split('/').collect();
-    let converted_parts: Vec<String> =
-        parts
-            .iter()
-            .map(|part| {
-                if part.starts_with(':') { format!("{{{}}}", &part[1..]) } else { part.to_string() }
-            })
-            .collect();
+    let converted_parts: Vec<String> = parts
+        .iter()
+        .map(|part| {
+            if let Some(stripped) = part.strip_prefix(':') {
+                format!("{{{stripped}}}")
+            } else {
+                part.to_string()
+            }
+        })
+        .collect();
 
     converted_parts.join("/")
 }
