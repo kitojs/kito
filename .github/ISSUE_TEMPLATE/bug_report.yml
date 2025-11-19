@@ -1,0 +1,65 @@
+name: Bug Report
+description: Report a problem or unexpected behavior in the project
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug!
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: What version are you using?
+      placeholder: e.g. 1.0.0-alpha.4
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description of the issue
+      description: Explain what happened and what you expected to happen
+      placeholder: "Describe the bug here"
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Provide steps so we can reproduce the issue
+      placeholder: |
+        1. Run ...
+        2. Call ...
+        3. Observe ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or error messages
+      description: Paste any relevant logs, stack traces, or console output
+      render: shell
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Describe your environment
+      placeholder: |
+        OS:
+        Runtime (Node/Bun/Deno):
+        CPU:
+        Additional details:
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I have searched existing issues
+        - label: I am using the latest version
