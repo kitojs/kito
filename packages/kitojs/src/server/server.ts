@@ -58,8 +58,9 @@ export class KitoServer<TExtensions = {}>
   constructor(options?: ServerOptions) {
     this.serverOptions = { ...this.serverOptions, ...options };
     this.coreServer = new ServerCore({
-      port: 3000,
-      host: "0.0.0.0",
+      port: options?.unixSocket ? undefined : 3000,
+      host: options?.unixSocket ? undefined : "0.0.0.0",
+      unixSocket: options?.unixSocket,
       ...options,
     });
   }
@@ -639,45 +640,64 @@ export class KitoServer<TExtensions = {}>
   }
 
   /**
-   * Starts the HTTP server and begins listening for requests.
+   * Starts the server.
    *
-   * @param portOrCallback - Port number or ready callback
-   * @param hostOrCallback - Host string or ready callback
-   * @param maybeCallback - Ready callback
-   * @returns Promise resolving to server configuration
+   * You can call `listen` in multiple ways:
    *
-   * @example
-   * ```typescript
-   * // Empty
-   * await app.listen();
+   * **1. Using a port (classic usage)**
+   * ```ts
+   * app.listen(3000);
+   * app.listen(3000, "0.0.0.0");
+   * app.listen(3000, () => console.log("Ready"));
+   * app.listen(3000, "0.0.0.0", () => console.log("Ready"));
+   * ```
    *
-   * // Simple
-   * await app.listen(3000);
-   *
-   * // With callback
-   * await app.listen(3000, () => {
-   *   console.log('Server ready!');
-   * });
-   *
-   * // With port and host
-   * await app.listen(3000, '127.0.0.1', () => {
-   *   console.log('Server ready on 127.0.0.1:3000');
+   * **2. Using an options object**
+   * ```ts
+   * app.listen({
+   *   port: 3000,
+   *   host: "0.0.0.0",
    * });
    * ```
+   *
+   * **3. Listening on a Unix Domain Socket**
+   * ```ts
+   * app.listen({
+   *   unixSocket: "/tmp/kito.sock",
+   * });
+   * ```
+   *
+   * When `unixSocket` is provided:
+   * - `port` and `host` are ignored
+   * - The server binds exclusively to the provided socket path
+   *
+   * You may also pass a callback as the last argument in all forms.
+   *
+   * @param portOrCallbackOrOptions Port number, callback, or a full `ServerOptions` object.
+   * @param hostOrCallback Hostname or callback.
+   * @param maybeCallback Optional callback executed once the server starts.
+   * @returns The resolved server configuration.
    */
   async listen(
-    portOrCallback?: number | (() => void),
+    portOrCallbackOrOptions?: number | (() => void) | ServerOptions,
     hostOrCallback?: string | (() => void),
     maybeCallback?: () => void,
   ): Promise<ServerOptionsCore> {
     let port: number | undefined;
     let host: string | undefined;
+    let unixSocket: string | undefined;
     let ready: (() => void) | undefined;
 
-    if (typeof portOrCallback === "function") {
-      ready = portOrCallback;
+    if (typeof portOrCallbackOrOptions === "object") {
+      const options = portOrCallbackOrOptions;
+      port = options.port;
+      host = options.host;
+      unixSocket = options.unixSocket;
+      ready = hostOrCallback as (() => void) | undefined;
+    } else if (typeof portOrCallbackOrOptions === "function") {
+      ready = portOrCallbackOrOptions;
     } else {
-      port = portOrCallback;
+      port = portOrCallbackOrOptions;
       if (typeof hostOrCallback === "function") {
         ready = hostOrCallback;
       } else {
@@ -686,13 +706,21 @@ export class KitoServer<TExtensions = {}>
       }
     }
 
-    const finalPort = port ?? this.serverOptions.port ?? 3000;
-    const finalHost = host ?? this.serverOptions.host ?? "0.0.0.0";
+    const finalUnixSocket = unixSocket ?? this.serverOptions.unixSocket;
+    const finalPort = finalUnixSocket
+      ? undefined
+      : (port ?? this.serverOptions.port ?? 3000);
+    const finalHost = finalUnixSocket
+      ? undefined
+      : (host ?? this.serverOptions.host ?? "0.0.0.0");
 
     const configuration: ServerOptionsCore = {
       port: finalPort,
       host: finalHost,
-      ...this.serverOptions,
+      unixSocket: finalUnixSocket,
+      trustProxy: this.serverOptions.trustProxy,
+      maxRequestSize: this.serverOptions.maxRequestSize,
+      timeout: this.serverOptions.timeout,
     };
 
     this.coreServer.setConfig(configuration);
