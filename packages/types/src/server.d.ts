@@ -9,6 +9,7 @@ export interface ServerOptions {
   trustProxy?: boolean;
   maxRequestSize?: number;
   timeout?: number;
+  reusePort?: boolean;
 }
 
 // biome-ignore lint/complexity/noBannedTypes: ...
