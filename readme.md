@@ -6,13 +6,13 @@
   
   <p>
     <strong>High-performance</strong>, fully <strong>type-safe</strong>, and modern web framework for <strong>TypeScript</strong>.  
-    Powered by <strong>Rust</strong> for extremely speed and low memory usage.
+    Powered by <strong>Rust</strong> for extreme speed and low memory usage.
   </p>
 </div>
 
 ---
 
-- **Extreme performance** – Rust core optimized for extremely speed & efficiency. **See the [benchmarks](https://github.com/kitojs/kito/tree/main/bench).**
+- **Extreme performance** – Rust core optimized for extreme speed & efficiency. **See the [benchmarks](https://github.com/kitojs/kito/tree/main/bench).**
 - **Type-safe** – full TypeScript support with end-to-end safety and exceptional DX.
 - **Schema validation** – built-in validation with zero bloat.  
 - **Middleware system** – composable and flexible like you expect.
@@ -22,10 +22,22 @@
 
 ## 🚀 Quick Start
 
-You can add **Kito** to a project as follows:
+You can add **Kito** to an existing project:
 
 ```bash
-pnpm add kitojs   # Or: npm i kitojs
+pnpm add kitojs
+
+# Or: npm/yarn/bun add kitojs
+# Or: deno add npm:kitojs
+```
+
+Or create a new project instantly with the [official starter](https://github.com/kitojs/create-kitojs):
+
+```bash
+pnpm create kitojs
+
+# Or: npm/yarn/bun create kitojs
+# Or: deno init --npm kitojs
 ```
 
 ### Minimal Example
