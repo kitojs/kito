@@ -23,7 +23,7 @@ use crate::{
 pub async fn handle_request(
     req: Request<Incoming>,
     config: ServerOptionsCore,
-    remote_addr: SocketAddr,
+    remote_addr: Option<SocketAddr>,
 ) -> Result<Response<Full<Bytes>>, std::convert::Infallible> {
     let method = req.method().to_string();
     let pathname = req.uri().path().to_string();
@@ -65,7 +65,7 @@ pub async fn handle_request(
     }
 
     let mut req_core =
-        match RequestCore::new(req, Some(remote_addr), config.trust_proxy.unwrap_or(false)).await {
+        match RequestCore::new(req, remote_addr, config.trust_proxy.unwrap_or(false)).await {
             Ok(core) => core,
             Err(e) => {
                 eprintln!("Error creating request: {e}");

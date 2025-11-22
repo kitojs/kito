@@ -5,6 +5,7 @@ import type { SchemaDefinition } from "./schema/base";
 export interface ServerOptions {
   port?: number;
   host?: string;
+  unixSocket?: string;
   trustProxy?: boolean;
   maxRequestSize?: number;
   timeout?: number;
@@ -109,6 +110,7 @@ export interface KitoServerInstance<TExtensions = {}> {
     host?: string,
     callback?: () => void,
   ): Promise<ServerOptions>;
+  listen(options: ServerOptions, callback?: () => void): Promise<ServerOptions>;
 
   close(): void;
 }
