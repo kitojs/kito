@@ -27,6 +27,7 @@ pub struct ServerOptionsCore {
     pub trust_proxy: Option<bool>,
     pub max_request_size: Option<u32>,
     pub timeout: Option<u32>,
+    pub reuse_port: Option<bool>,
 }
 
 #[napi]
@@ -90,7 +91,21 @@ impl ServerCore {
         let host = self.config.host.as_deref().unwrap_or("0.0.0.0");
         let addr: SocketAddr = format!("{host}:{port}").parse().expect("Invalid address");
 
-        let listener = TcpListener::bind(addr).await.unwrap();
+        let listener = if self.config.reuse_port.unwrap_or(false) {
+            #[cfg(unix)]
+            {
+                create_reusable_listener(addr).await.expect("Failed to create listener")
+            }
+            #[cfg(not(unix))]
+            {
+                eprintln!(
+                    "Warning: reuse_port is not supported on this platform, using standard listener"
+                );
+                TcpListener::bind(addr).await.expect("Failed to bind")
+            }
+        } else {
+            TcpListener::bind(addr).await.expect("Failed to bind")
+        };
 
         if let Some(ready_cb) = ready {
             ready_cb.call(Ok(()), ThreadsafeFunctionCallMode::NonBlocking);
@@ -169,4 +184,25 @@ impl ServerCore {
             let _ = tx.send(());
         }
     }
+}
+
+#[cfg(unix)]
+async fn create_reusable_listener(addr: SocketAddr) -> std::io::Result<TcpListener> {
+    use socket2::{Domain, Protocol, Socket, Type};
+    use std::net::TcpListener as StdListener;
+
+    let domain = if addr.is_ipv4() { Domain::IPV4 } else { Domain::IPV6 };
+    let socket = Socket::new(domain, Type::STREAM, Some(Protocol::TCP))?;
+
+    socket.set_reuse_address(true)?;
+
+    #[cfg(all(unix, not(target_os = "solaris"), not(target_os = "illumos")))]
+    socket.set_reuse_port(true)?;
+
+    socket.set_nonblocking(true)?;
+    socket.bind(&addr.into())?;
+    socket.listen(1024)?;
+
+    let std_listener: StdListener = socket.into();
+    TcpListener::from_std(std_listener)
 }
