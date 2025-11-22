@@ -58,10 +58,13 @@ export class KitoServer<TExtensions = {}>
   constructor(options?: ServerOptions) {
     this.serverOptions = { ...this.serverOptions, ...options };
     this.coreServer = new ServerCore({
-      port: options?.unixSocket ? undefined : 3000,
-      host: options?.unixSocket ? undefined : "0.0.0.0",
+      port: options?.unixSocket ? undefined : options?.port,
+      host: options?.unixSocket ? undefined : options?.host,
       unixSocket: options?.unixSocket,
-      ...options,
+      reusePort: options?.reusePort,
+      trustProxy: options?.trustProxy,
+      maxRequestSize: options?.maxRequestSize,
+      timeout: options?.timeout,
     });
   }
 
@@ -686,6 +689,7 @@ export class KitoServer<TExtensions = {}>
     let port: number | undefined;
     let host: string | undefined;
     let unixSocket: string | undefined;
+    let reusePort: boolean | undefined;
     let ready: (() => void) | undefined;
 
     if (typeof portOrCallbackOrOptions === "object") {
@@ -693,6 +697,7 @@ export class KitoServer<TExtensions = {}>
       port = options.port;
       host = options.host;
       unixSocket = options.unixSocket;
+      reusePort = options.reusePort;
       ready = hostOrCallback as (() => void) | undefined;
     } else if (typeof portOrCallbackOrOptions === "function") {
       ready = portOrCallbackOrOptions;
@@ -707,6 +712,7 @@ export class KitoServer<TExtensions = {}>
     }
 
     const finalUnixSocket = unixSocket ?? this.serverOptions.unixSocket;
+    const finalReusePort = reusePort ?? this.serverOptions.reusePort ?? false;
     const finalPort = finalUnixSocket
       ? undefined
       : (port ?? this.serverOptions.port ?? 3000);
@@ -718,6 +724,7 @@ export class KitoServer<TExtensions = {}>
       port: finalPort,
       host: finalHost,
       unixSocket: finalUnixSocket,
+      reusePort: finalReusePort,
       trustProxy: this.serverOptions.trustProxy,
       maxRequestSize: this.serverOptions.maxRequestSize,
       timeout: this.serverOptions.timeout,
