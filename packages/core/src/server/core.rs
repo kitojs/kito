@@ -80,7 +80,7 @@ impl ServerCore {
                     tokio::spawn(async move {
                         if let Err(err) = http1::Builder::new()
                             .serve_connection(io, hyper::service::service_fn(move |req| {
-                                handle_request(req, config.clone(), addr)
+                                handle_request(req, config.clone(), Some(addr))
                             }))
                             .await
                         {
