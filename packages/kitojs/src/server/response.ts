@@ -4,9 +4,16 @@ import type {
   CookieOptions,
   SendFileOptions,
   CommonResponseHeaderNames,
+  StreamWriter,
+  SSEWriter,
 } from "@kitojs/types";
 
-import { sendResponse } from "@kitojs/kito-core";
+import {
+  sendResponse,
+  startStream,
+  sendChunk,
+  endStream,
+} from "@kitojs/kito-core";
 import { readFileSync } from "node:fs";
 
 const HTTP_STATUS_MESSAGES: Record<number, string> = {
@@ -33,6 +40,66 @@ interface ResponseState {
   status: number;
   headers: Map<string, string>;
   body?: Buffer;
+  streaming: boolean;
+}
+
+class StreamWriterImpl implements StreamWriter {
+  // biome-ignore lint/suspicious/noExplicitAny: ...
+  constructor(private channel: any) {}
+
+  write(data: string | Buffer): void {
+    const buffer = Buffer.isBuffer(data) ? data : Buffer.from(data, "utf-8");
+    sendChunk(this.channel, buffer);
+  }
+
+  end(data?: string | Buffer): void {
+    if (data !== undefined) {
+      this.write(data);
+    }
+
+    endStream(this.channel);
+  }
+}
+
+class SSEWriterImpl implements SSEWriter {
+  // biome-ignore lint/suspicious/noExplicitAny: ...
+  constructor(private channel: any) {}
+
+  send(data: unknown, event?: string, id?: string, retry?: number): void {
+    let message = "";
+
+    if (event) {
+      message += `event: ${event}\n`;
+    }
+
+    if (id) {
+      message += `id: ${id}\n`;
+    }
+
+    if (retry !== undefined) {
+      message += `retry: ${retry}\n`;
+    }
+
+    const dataStr = typeof data === "string" ? data : JSON.stringify(data);
+    const lines = dataStr.split("\n");
+
+    for (const line of lines) {
+      message += `data: ${line}\n`;
+    }
+
+    message += "\n";
+
+    sendChunk(this.channel, Buffer.from(message, "utf-8"));
+  }
+
+  comment(text: string): void {
+    const message = `: ${text}\n\n`;
+    sendChunk(this.channel, Buffer.from(message, "utf-8"));
+  }
+
+  close(): void {
+    endStream(this.channel);
+  }
 }
 
 export class ResponseBuilder implements KitoResponse {
@@ -47,6 +114,7 @@ export class ResponseBuilder implements KitoResponse {
     this.state = {
       status: 200,
       headers: new Map(),
+      streaming: false,
     };
   }
 
@@ -82,6 +150,29 @@ export class ResponseBuilder implements KitoResponse {
     }
 
     sendResponse(this.channel, buffer);
+    this.finished = true;
+  }
+
+  private startStreamingResponse(): void {
+    const headersArray = Array.from(this.state.headers.entries());
+    const headersJson = JSON.stringify(headersArray);
+    const headersBytes = Buffer.from(headersJson, "utf-8");
+
+    const totalSize = 2 + 4 + headersBytes.length;
+    const buffer = Buffer.allocUnsafe(totalSize);
+
+    let offset = 0;
+
+    buffer.writeUInt16LE(this.state.status, offset);
+    offset += 2;
+
+    buffer.writeUInt32LE(headersBytes.length, offset);
+    offset += 4;
+
+    headersBytes.copy(buffer, offset);
+
+    startStream(this.channel, buffer);
+    this.state.streaming = true;
     this.finished = true;
   }
 
@@ -418,5 +509,29 @@ export class ResponseBuilder implements KitoResponse {
     }
 
     return this;
+  }
+
+  stream(): StreamWriter {
+    this.checkFinished();
+
+    if (!this.state.headers.has("content-type")) {
+      this.type("application/octet-stream");
+    }
+
+    this.startStreamingResponse();
+
+    return new StreamWriterImpl(this.channel);
+  }
+
+  sse(): SSEWriter {
+    this.checkFinished();
+
+    this.type("text/event-stream");
+    this.header("cache-control", "no-cache");
+    this.header("connection", "keep-alive");
+
+    this.startStreamingResponse();
+
+    return new SSEWriterImpl(this.channel);
   }
 }
