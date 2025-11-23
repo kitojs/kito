@@ -73,11 +73,27 @@ export class RequestBuilder implements KitoRequest {
   }
 
   json<T = unknown>(): T {
-    return JSON.parse(this.body.toString("utf-8"));
+    if (typeof this.body === "object" && !Buffer.isBuffer(this.body)) {
+      return this.body as T;
+    }
+
+    if (Buffer.isBuffer(this.body)) {
+      return JSON.parse(this.body.toString("utf-8")) as T;
+    }
+
+    if (typeof this.body === "string") {
+      return JSON.parse(this.body) as T;
+    }
+
+    return this.body as T;
   }
 
   text(): string {
-    return this.body.toString("utf-8");
+    if (Buffer.isBuffer(this.body)) {
+      return this.body.toString("utf-8");
+    }
+
+    return String(this.body);
   }
 
   get headers(): RequestHeaders {
