@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://github.com/kitojs/.github/blob/778babf439eaf2f2269522ac8e60ec8a0b0d157b/assets/kito-banner.png" width="220px" />
+  <img src="https://github.com/kitojs/.github/blob/882f94e7c1bb1c463ad475539aa4d53a2eeef1d5/assets/kito-banner.svg" width="220px" />
   
   <br />
   <br />
