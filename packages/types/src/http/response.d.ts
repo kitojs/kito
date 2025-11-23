@@ -19,6 +19,19 @@ export type CommonResponseHeaderNames =
   | "x-content-type-options"
   | "strict-transport-security";
 
+export interface StreamWriter {
+  write(data: string | Buffer): void;
+
+  end(): void;
+  end(data: string | Buffer): void;
+}
+
+export interface SSEWriter {
+  send(data: unknown, event?: string, id?: string, retry?: number): void;
+  comment(text: string): void;
+  close(): void;
+}
+
 export interface KitoResponse<TResponseSchema = unknown> {
   status(code: number): KitoResponse<TResponseSchema>;
   sendStatus(code: number): void;
@@ -86,6 +99,9 @@ export interface KitoResponse<TResponseSchema = unknown> {
   vary(field: string): KitoResponse<TResponseSchema>;
   links(links: Record<string, string>): KitoResponse<TResponseSchema>;
   format(obj: Record<string, () => void>): KitoResponse<TResponseSchema>;
+
+  stream(): StreamWriter;
+  sse(): SSEWriter;
 }
 
 export interface CookieOptions {
