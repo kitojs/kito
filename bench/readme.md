@@ -1,4 +1,4 @@
-<img src="https://github.com/kitojs/.github/blob/1461ad6c9d6eb7f952c3fbd3a6ed3c21dd78eebb/assets/kito-logo.png" width="200px" align="right" />
+<img src="https://github.com/kitojs/.github/blob/882f94e7c1bb1c463ad475539aa4d53a2eeef1d5/assets/kito-logo.svg" width="200px" align="right" />
 
 # Kito - `benchmarks`
 
@@ -58,7 +58,7 @@ pnpm bench:run basic
 
 This will:
 1. Start each framework on sequential ports (3000, 3001, ...)
-2. Run [autocannon](https://github.com/mcollina/autocannon) load tests
+2. Run [wrk](https://github.com/wg/wrk) load tests
 3. Generate comparison charts
 4. Save detailed results to `results/data/`
 
@@ -78,7 +78,7 @@ bench/
 │   ├── charts/          # Generated benchmark charts
 │   └── data/            # Raw JSON results
 ├── utils/
-│   ├── http.ts          # Autocannon runner
+│   ├── http.ts          # Wrk runner
 │   └── chart.ts         # Chart generation
 ├── config.ts            # Benchmark configuration
 └── runBench.ts          # Main benchmark runner
