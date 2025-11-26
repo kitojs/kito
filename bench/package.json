@@ -3,17 +3,16 @@
   "description": "Kito's benchmarks.",
   "private": true,
   "type": "module",
-
   "scripts": {
-    "bench:run": "tsx runBench.ts"
+    "bench:run": "bun run runBench.ts"
   },
-  
   "dependencies": {
     "@hapi/hapi": "^21.4.3",
     "@hono/node-server": "^1.19.6",
     "@koa/router": "^14.0.0",
     "@tinyhttp/app": "^3.0.1",
     "chart.js": "^4.5.1",
+    "elysia": "^1.4.16",
     "express": "^5.1.0",
     "fastify": "^5.6.1",
     "hono": "^4.10.4",

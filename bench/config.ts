@@ -1,14 +1,20 @@
+type FrameworkConfig = {
+  name: string;
+  runtime?: "bun" | "node";
+};
+
 export default {
   frameworks: [
-    "kito",
-    "express",
-    "fastify",
-    "hono",
-    "restify",
-    "tinyhttp",
-    "koa",
-    "hapi",
-  ],
+    { name: "kito" },
+    { name: "elysia", runtime: "bun" },
+    { name: "express" },
+    { name: "fastify" },
+    { name: "hono", runtime: "bun" },
+    { name: "restify", runtime: "node" },
+    { name: "tinyhttp" },
+    { name: "koa" },
+    { name: "hapi" },
+  ] satisfies FrameworkConfig[],
   hostname: "localhost",
 
   connections: 100,
@@ -21,3 +27,5 @@ export default {
     output: "results/charts/result.png",
   },
 };
+
+export type { FrameworkConfig };
