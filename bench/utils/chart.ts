@@ -28,7 +28,11 @@ type ChartData = {
   throughput: number[];
 };
 
-export async function generateChart(data: ChartData, outputPath: string) {
+export async function generateChart(
+  data: ChartData,
+  outputPath: string,
+  runtime?: string,
+) {
   try {
     const canvas = new Canvas(1000, 600);
 
@@ -94,7 +98,9 @@ export async function generateChart(data: ChartData, outputPath: string) {
           },
           title: {
             display: true,
-            text: "Benchmark Results",
+            text: runtime
+              ? `Benchmark Results - ${runtime.toUpperCase()}`
+              : "Benchmark Results",
             color: "#1f2937",
             font: {
               size: 28,

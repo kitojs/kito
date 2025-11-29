@@ -8,7 +8,7 @@ Performance benchmarks comparing Kito against popular Node.js web frameworks.
 
 ## 📊 Latest Results
 
-![Benchmark Results](results/charts/result.png)
+![Benchmark Results](results/charts/result-node.png)
 
 > **Note:** Benchmarks are automatically updated on each release.
 
