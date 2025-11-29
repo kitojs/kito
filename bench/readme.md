@@ -62,6 +62,23 @@ This will:
 3. Generate comparison charts
 4. Save detailed results to `results/data/`
 
+### Mixing Node and Bun runtimes
+
+Some framework adapters only work on Node.js while others can run under Bun. You can pin the runtime per framework in `config.ts`:
+
+```ts
+frameworks: [
+  { name: "kito", runtime: "bun" },
+  { name: "elysia", runtime: "bun" },
+  { name: "restify", runtime: "node" },
+  "koa", // uses whichever runtime you launch the runner with
+];
+```
+
+- Default (string) entries execute inside the same runtime that starts `runBench.ts`.
+- `runtime: "bun"` executes via `pnpm dlx bun run ...`, so make sure `pnpm` is available (it will download Bun on demand).
+- `runtime: "node"` executes via `pnpm dlx tsx ...`, so no local CLI install is required beyond `pnpm`.
+
 ---
 
 ## 📁 Project Structure
