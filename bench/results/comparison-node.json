@@ -1,0 +1,83 @@
+{
+  "winner": "kito",
+  "runtime": "node",
+  "machine": {
+    "cpu": "Intel(R) Core(TM) i5-8600K CPU @ 3.60GHz",
+    "memory": "31 GB",
+    "platform": "linux 6.12.48-1-MANJARO"
+  },
+  "ranking": [
+    {
+      "rank": 1,
+      "framework": "kito",
+      "requests": 282020.9,
+      "latency": 0.38923,
+      "throughput": 32149340.16,
+      "difference": "0%"
+    },
+    {
+      "rank": 2,
+      "framework": "fastify",
+      "requests": 42597.14,
+      "latency": 2.7,
+      "throughput": 7539261.44,
+      "difference": "-84.90%"
+    },
+    {
+      "rank": 3,
+      "framework": "hono",
+      "requests": 37869.16,
+      "latency": 3.2,
+      "throughput": 6668943.36,
+      "difference": "-86.57%"
+    },
+    {
+      "rank": 4,
+      "framework": "koa",
+      "requests": 28399.52,
+      "latency": 4.14,
+      "throughput": 5001707.52,
+      "difference": "-89.93%"
+    },
+    {
+      "rank": 5,
+      "framework": "restify",
+      "requests": 26687.06,
+      "latency": 4.31,
+      "throughput": 4959764.48,
+      "difference": "-90.54%"
+    },
+    {
+      "rank": 6,
+      "framework": "hapi",
+      "requests": 26628.01,
+      "latency": 4.48,
+      "throughput": 5913968.64,
+      "difference": "-90.56%"
+    },
+    {
+      "rank": 7,
+      "framework": "tinyhttp",
+      "requests": 24126.25,
+      "latency": 4.89,
+      "throughput": 5788139.52,
+      "difference": "-91.45%"
+    },
+    {
+      "rank": 8,
+      "framework": "elysia",
+      "requests": 15821.79,
+      "latency": 7.81,
+      "throughput": 2548039.68,
+      "difference": "-94.39%"
+    },
+    {
+      "rank": 9,
+      "framework": "express",
+      "requests": 9914.66,
+      "latency": 12.59,
+      "throughput": 2369781.76,
+      "difference": "-96.48%"
+    }
+  ]
+}

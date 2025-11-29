@@ -1,11 +1,22 @@
 {
-  "requests": {
-    "average": 8925.49
+  "machine": {
+    "cpu": "Intel(R) Core(TM) i5-8600K CPU @ 3.60GHz",
+    "memory": "31 GB",
+    "platform": "linux 6.12.48-1-MANJARO"
   },
-  "latency": {
-    "average": 14.05
+  "runtime": "node",
+  "framework": "express",
+  "results": {
+    "requests": {
+      "average": 9914.66
+    },
+    "latency": {
+      "average": 12.59
+    },
+    "throughput": {
+      "average": 2369781.76
+    }
   },
-  "throughput": {
-    "average": 2128609.28
-  }
+  "previousResults": null,
+  "comparison": null
 }
