@@ -1,0 +1,11 @@
+{
+	"requests": {
+		"average": 24432.27
+	},
+	"latency": {
+		"average": 4.68
+	},
+	"throughput": {
+		"average": 4540334.08
+	}
+}

@@ -7,6 +7,7 @@
     "bench:run": "bun run runBench.ts"
   },
   "dependencies": {
+    "@elysiajs/node": "^1.4.2",
     "@hapi/hapi": "^21.4.3",
     "@hono/node-server": "^1.19.6",
     "@koa/router": "^14.0.0",

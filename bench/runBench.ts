@@ -39,16 +39,6 @@ const PROJECT_ROOT = path.dirname(fileURLToPath(import.meta.url));
 const RUNNER_ENTRY = path.join(PROJECT_ROOT, "utils", "frameworkRunner.ts");
 const PNPM_BIN = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 
-function normalizeFramework(entry: FrameworkConfig): NormalizedFramework {
-  if (typeof entry === "string") {
-    return { name: entry, runtime: CURRENT_RUNTIME };
-  }
-
-  return {
-    name: entry.name,
-    runtime: entry.runtime ?? CURRENT_RUNTIME,
-  };
-}
 
 async function launchFramework(
   benchName: string,
@@ -136,59 +126,86 @@ async function main() {
     process.exit(1);
   }
 
-  const results: BenchmarkResult[] = [];
-  let port = 3000;
+  const runtimes: FrameworkRuntime[] = ["node", "bun"];
 
-  for (const entry of frameworks) {
-    const framework = normalizeFramework(entry);
-    const benchInstance = await launchFramework(benchName, framework, port);
-    await waitForServerReady(port);
+  for (const runtime of runtimes) {
+    console.log(`\n${"-".repeat(40)}`);
+    console.log(`Running benchmarks on ${runtime.toUpperCase()} runtime`);
+    console.log(`${"-".repeat(40)}\n`);
 
-    console.log(
-      `Running benchmark for ${framework.name} (runtime: ${framework.runtime})...`,
-    );
-    const URL = `http://${hostname}:${port}`;
+    const results: BenchmarkResult[] = [];
+    let port = 3000;
 
-    const result = await runBenchmark(URL);
-    results.push({ framework: framework.name, result });
+    for (const frameworkName of frameworks) {
+      if (runtime === "bun" && frameworkName === "restify") {
+        console.log(
+          `Skipping ${frameworkName} (not compatible with Bun runtime)`,
+        );
 
-    port++;
+        continue;
+      }
 
-    await benchInstance.stop();
-  }
+      const framework: NormalizedFramework = {
+        name: frameworkName,
+        runtime: runtime,
+      };
 
-  console.table(
-    results.map(({ framework, result }) => ({
-      Framework: framework,
-      "Requests/sec": result.requests.average,
-      "Latency (ms)": result.latency.average,
-      "Throughput (bytes/sec)": result.throughput.average,
-    })),
-  );
+      const benchInstance = await launchFramework(benchName, framework, port);
+      await waitForServerReady(port);
 
-  if (chart?.enabled) {
-    const output = chart.output || "results/charts/result.png";
-    await generateChart(
-      {
-        frameworks: results.map((r) => r.framework),
-        requests: results.map((r) => r.result.requests.average),
-        latency: results.map((r) => r.result.latency.average),
-        throughput: results.map((r) => r.result.throughput.average),
-      },
-      output,
-    );
-  }
+      console.log(
+        `Running benchmark for ${framework.name} (runtime: ${framework.runtime})...`,
+      );
+      const URL = `http://${hostname}:${port}`;
 
-  for (const result of results) {
-    const OUTPUT_PATH = "results/data";
-    const data = JSON.stringify(result.result, null, "\t");
+      const result = await runBenchmark(URL);
+      results.push({ framework: framework.name, result });
 
-    if (!fs.existsSync(OUTPUT_PATH)) {
-      fs.mkdirSync(OUTPUT_PATH, { recursive: true });
+      port++;
+
+      await benchInstance.stop();
     }
 
-    fs.writeFileSync(`${OUTPUT_PATH}/${result.framework}.json`, data);
+    console.table(
+      results.map(({ framework, result }) => ({
+        Framework: framework,
+        "Requests/sec": result.requests.average,
+        "Latency (ms)": result.latency.average,
+        "Throughput (bytes/sec)": result.throughput.average,
+      })),
+    );
+
+    if (chart?.enabled) {
+      const output =
+        chart.output?.replace("result.png", `result-${runtime}.png`) ||
+        `results/charts/result-${runtime}.png`;
+      await generateChart(
+        {
+          frameworks: results.map((r) => r.framework),
+          requests: results.map((r) => r.result.requests.average),
+          latency: results.map((r) => r.result.latency.average),
+          throughput: results.map((r) => r.result.throughput.average),
+        },
+        output,
+        runtime,
+      );
+    }
+
+    for (const result of results) {
+      const OUTPUT_PATH = `results/data/${runtime}`;
+      const data = JSON.stringify(result.result, null, "\t");
+
+      if (!fs.existsSync(OUTPUT_PATH)) {
+        fs.mkdirSync(OUTPUT_PATH, { recursive: true });
+      }
+
+      fs.writeFileSync(`${OUTPUT_PATH}/${result.framework}.json`, data);
+    }
   }
+
+  console.log(`\n${"-".repeat(40)}`);
+  console.log("✅ All benchmarks completed!");
+  console.log(`${"-".repeat(40)}\n`);
 
   process.exit(0);
 }

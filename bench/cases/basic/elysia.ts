@@ -1,13 +1,19 @@
 import { Elysia } from "elysia";
+import { node } from "@elysiajs/node";
+
+declare const Bun: any;
+
 
 export function start(port: number): { stop: () => void } {
-  const app = new Elysia();
+  const isBun = typeof Bun !== "undefined";
+
+  const app = isBun ? new Elysia() : new Elysia({ adapter: node() });
 
   app.get("/", () => "hello world!");
 
-  const appListen = app.listen(port);
+  const server = app.listen(port);
 
   return {
-    stop: async () => appListen.stop(),
+    stop: async () => server.stop(),
   };
 }
