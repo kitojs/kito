@@ -13,15 +13,6 @@ Each package is **independent**, versioned, and published under the `@kitojs/*` 
 
 ```
 📂 packages/
-├── 📂 cli
-│   ├── 📄 Cargo.toml
-│   ├── 📄 package.json
-│   ├── 📄 install.js
-│   ├── 📄 .gitignore
-│   └── 📂 src
-│       ├── 📄 commands.rs
-│       ├── 📄 main.rs
-│       └── 📄 utils.rs
 ├── 📂 core
 │   ├── 📄 Cargo.toml
 │   ├── 📄 package.json
@@ -72,13 +63,6 @@ Each package is **independent**, versioned, and published under the `@kitojs/*` 
   - Validation of request schemas and automatic error handling.  
   - Integration with JS/TS through N-API bindings.  
 - This package is **fully written in Rust**, compiled to a native module, and serves as the runtime for all server logic.
-
-### `@kitojs/kito-cli`
-- Command-line interface to scaffold and manage Kito projects.  
-- Features:
-  - Project initialization (`kito init`, `kito new`).
-  - Running local servers and hot reload.
-  - Helpers to manage routes, schemas, and project metadata.
 
 ### `kitojs` (TypeScript library)
 - Main **TypeScript wrapper** for Kito, exposing the framework API to developers.  
