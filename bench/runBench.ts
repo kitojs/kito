@@ -221,12 +221,38 @@ async function main() {
 
     for (const result of results) {
       const OUTPUT_PATH = `results/data/${runtime}`;
+      const FILE_PATH = `${OUTPUT_PATH}/${result.framework}.json`;
+
+      let previousResults = null;
+      let comparison = null;
+
+      if (fs.existsSync(FILE_PATH)) {
+        try {
+          const content = JSON.parse(fs.readFileSync(FILE_PATH, "utf-8"));
+          if (content.results) {
+            previousResults = content.results;
+
+            const calcDiff = (current: number, previous: number) => {
+              const diff = ((current - previous) / previous) * 100;
+              return `${diff > 0 ? "+" : ""}${diff.toFixed(2)}%`;
+            };
+
+            comparison = {
+              requests: calcDiff(result.result.requests.average, previousResults.requests.average),
+              latency: calcDiff(result.result.latency.average, previousResults.latency.average),
+              throughput: calcDiff(result.result.throughput.average, previousResults.throughput.average),
+            };
+          }
+        } catch (_) { }
+      }
 
       const outputData = {
         machine,
         runtime,
         framework: result.framework,
-        results: result.result
+        results: result.result,
+        previousResults,
+        comparison
       };
 
       const data = JSON.stringify(outputData, null, "\t");
@@ -235,8 +261,39 @@ async function main() {
         fs.mkdirSync(OUTPUT_PATH, { recursive: true });
       }
 
-      fs.writeFileSync(`${OUTPUT_PATH}/${result.framework}.json`, data);
+      fs.writeFileSync(FILE_PATH, data);
     }
+
+    const sortedResults = [...results].sort(
+      (a, b) => b.result.requests.average - a.result.requests.average
+    );
+
+    const winner = sortedResults[0];
+
+    const ranking = sortedResults.map((item, index) => {
+      const diff = ((item.result.requests.average - winner.result.requests.average) / winner.result.requests.average) * 100;
+
+      return {
+        rank: index + 1,
+        framework: item.framework,
+        requests: item.result.requests.average,
+        latency: item.result.latency.average,
+        throughput: item.result.throughput.average,
+        difference: index === 0 ? "0%" : `${diff.toFixed(2)}%`
+      };
+    });
+
+    const leaderboard = {
+      winner: winner.framework,
+      runtime,
+      machine,
+      ranking
+    };
+
+    fs.writeFileSync(
+      `results/comparison-${runtime}.json`,
+      JSON.stringify(leaderboard, null, "\t")
+    );
   }
 
   console.log(`\n${"-".repeat(40)}`);
