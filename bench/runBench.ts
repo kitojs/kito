@@ -134,7 +134,21 @@ async function main() {
     process.exit(1);
   }
 
-  const runtimes: FrameworkRuntime[] = ["node", "bun"];
+  const args = process.argv.slice(3);
+  const excludeRuntimes = args
+    .find((arg) => arg.startsWith("--exclude-runtime="))
+    ?.split("=")[1]
+    ?.split(",") || [];
+
+  const excludeFrameworks = args
+    .find((arg) => arg.startsWith("--exclude-framework="))
+    ?.split("=")[1]
+    ?.split(",") || [];
+
+  const runtimes: FrameworkRuntime[] = ["node", "bun"].filter(
+    (r) => !excludeRuntimes.includes(r)
+  ) as FrameworkRuntime[];
+
   const machine = getMachineSpecs();
 
   for (const runtime of runtimes) {
@@ -146,6 +160,11 @@ async function main() {
     let port = 3000;
 
     for (const frameworkName of frameworks) {
+      if (excludeFrameworks.includes(frameworkName)) {
+        console.log(`Skipping ${frameworkName} (excluded via flag)`);
+        continue;
+      }
+
       if (runtime === "bun" && frameworkName === "restify") {
         console.log(
           `Skipping ${frameworkName} (not compatible with Bun runtime)`,
