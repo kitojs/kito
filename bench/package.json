@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "bench:run": "bun run runBench.ts"
+    "bench:run": "bun run runBench.ts",
+    "bench:node": "bun run runBench.ts --exclude-runtime=bun",
+    "bench:bun": "bun run runBench.ts --exclude-runtime=node"
   },
   "dependencies": {
     "@elysiajs/node": "^1.4.2",
