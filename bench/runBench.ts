@@ -1,8 +1,7 @@
 import { runBenchmark } from "./utils/http.ts";
 
 import config, {
-  type FrameworkConfig,
-  type FrameworkRuntime,
+  type FrameworkRuntime
 } from "./config.ts";
 const { hostname, frameworks, chart } = config;
 
@@ -13,6 +12,7 @@ import fs from "node:fs";
 import { spawn, type ChildProcess } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import os from "node:os";
 
 type BenchmarkResult = {
   framework: string;
@@ -117,6 +117,14 @@ async function stopChildProcess(child: ChildProcess): Promise<void> {
   });
 }
 
+function getMachineSpecs() {
+  const cpu = os.cpus()[0].model;
+  const memory = `${Math.round(os.totalmem() / 1024 / 1024 / 1024)} GB`;
+  const platform = `${os.platform()} ${os.release()}`;
+
+  return { cpu, memory, platform };
+}
+
 async function main() {
   const benchName = process.argv[2];
   if (!benchName) {
@@ -127,6 +135,7 @@ async function main() {
   }
 
   const runtimes: FrameworkRuntime[] = ["node", "bun"];
+  const machine = getMachineSpecs();
 
   for (const runtime of runtimes) {
     console.log(`\n${"-".repeat(40)}`);
@@ -193,7 +202,15 @@ async function main() {
 
     for (const result of results) {
       const OUTPUT_PATH = `results/data/${runtime}`;
-      const data = JSON.stringify(result.result, null, "\t");
+
+      const outputData = {
+        machine,
+        runtime,
+        framework: result.framework,
+        results: result.result
+      };
+
+      const data = JSON.stringify(outputData, null, "\t");
 
       if (!fs.existsSync(OUTPUT_PATH)) {
         fs.mkdirSync(OUTPUT_PATH, { recursive: true });
