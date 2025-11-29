@@ -3,6 +3,8 @@ type FrameworkConfig = {
   runtime?: "bun" | "node";
 };
 
+type FrameworkRuntime = "bun" | "node";
+
 export default {
   frameworks: [
     { name: "kito" },
@@ -28,4 +30,4 @@ export default {
   },
 };
 
-export type { FrameworkConfig };
+export type { FrameworkConfig, FrameworkRuntime };
