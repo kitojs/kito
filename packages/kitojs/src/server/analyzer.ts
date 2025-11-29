@@ -36,7 +36,7 @@ export function analyzeHandler(handler: Function): StaticResponseType {
 
     let responseCall: ResponseCall | null = null;
     let hasLogic = false;
-    
+
     const usedParams = new Set<string>();
     const usedQuery = new Set<string>();
 

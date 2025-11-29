@@ -1,8 +1,6 @@
 import { runBenchmark } from "./utils/http.ts";
 
-import config, {
-  type FrameworkRuntime
-} from "./config.ts";
+import config, { type FrameworkRuntime } from "./config.ts";
 const { hostname, frameworks, chart } = config;
 
 import { generateChart } from "./utils/chart.ts";
@@ -38,7 +36,6 @@ const CURRENT_RUNTIME: FrameworkRuntime =
 const PROJECT_ROOT = path.dirname(fileURLToPath(import.meta.url));
 const RUNNER_ENTRY = path.join(PROJECT_ROOT, "utils", "frameworkRunner.ts");
 const PNPM_BIN = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
-
 
 async function launchFramework(
   benchName: string,
@@ -135,18 +132,20 @@ async function main() {
   }
 
   const args = process.argv.slice(3);
-  const excludeRuntimes = args
-    .find((arg) => arg.startsWith("--exclude-runtime="))
-    ?.split("=")[1]
-    ?.split(",") || [];
+  const excludeRuntimes =
+    args
+      .find((arg) => arg.startsWith("--exclude-runtime="))
+      ?.split("=")[1]
+      ?.split(",") || [];
 
-  const excludeFrameworks = args
-    .find((arg) => arg.startsWith("--exclude-framework="))
-    ?.split("=")[1]
-    ?.split(",") || [];
+  const excludeFrameworks =
+    args
+      .find((arg) => arg.startsWith("--exclude-framework="))
+      ?.split("=")[1]
+      ?.split(",") || [];
 
   const runtimes: FrameworkRuntime[] = ["node", "bun"].filter(
-    (r) => !excludeRuntimes.includes(r)
+    (r) => !excludeRuntimes.includes(r),
   ) as FrameworkRuntime[];
 
   const machine = getMachineSpecs();
@@ -238,12 +237,21 @@ async function main() {
             };
 
             comparison = {
-              requests: calcDiff(result.result.requests.average, previousResults.requests.average),
-              latency: calcDiff(result.result.latency.average, previousResults.latency.average),
-              throughput: calcDiff(result.result.throughput.average, previousResults.throughput.average),
+              requests: calcDiff(
+                result.result.requests.average,
+                previousResults.requests.average,
+              ),
+              latency: calcDiff(
+                result.result.latency.average,
+                previousResults.latency.average,
+              ),
+              throughput: calcDiff(
+                result.result.throughput.average,
+                previousResults.throughput.average,
+              ),
             };
           }
-        } catch (_) { }
+        } catch (_) {}
       }
 
       const outputData = {
@@ -252,7 +260,7 @@ async function main() {
         framework: result.framework,
         results: result.result,
         previousResults,
-        comparison
+        comparison,
       };
 
       const data = JSON.stringify(outputData, null, "\t");
@@ -265,13 +273,16 @@ async function main() {
     }
 
     const sortedResults = [...results].sort(
-      (a, b) => b.result.requests.average - a.result.requests.average
+      (a, b) => b.result.requests.average - a.result.requests.average,
     );
 
     const winner = sortedResults[0];
 
     const ranking = sortedResults.map((item, index) => {
-      const diff = ((item.result.requests.average - winner.result.requests.average) / winner.result.requests.average) * 100;
+      const diff =
+        ((item.result.requests.average - winner.result.requests.average) /
+          winner.result.requests.average) *
+        100;
 
       return {
         rank: index + 1,
@@ -279,7 +290,7 @@ async function main() {
         requests: item.result.requests.average,
         latency: item.result.latency.average,
         throughput: item.result.throughput.average,
-        difference: index === 0 ? "0%" : `${diff.toFixed(2)}%`
+        difference: index === 0 ? "0%" : `${diff.toFixed(2)}%`,
       };
     });
 
@@ -287,12 +298,12 @@ async function main() {
       winner: winner.framework,
       runtime,
       machine,
-      ranking
+      ranking,
     };
 
     fs.writeFileSync(
       `results/comparison-${runtime}.json`,
-      JSON.stringify(leaderboard, null, "\t")
+      JSON.stringify(leaderboard, null, "\t"),
     );
   }
 

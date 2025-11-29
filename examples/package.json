@@ -3,7 +3,7 @@
   "description": "Kito's usage examples.",
   "private": true,
   "type": "module",
-  
+
   "scripts": {
     "ex:run": "tsx runExample.ts"
   },

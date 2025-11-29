@@ -8,13 +8,7 @@
   "includeVersion": true,
   "readme": "../../readme.md",
   "categorizeByGroup": true,
-  "categoryOrder": [
-    "Server",
-    "Schemas",
-    "Middleware",
-    "Types",
-    "*"
-  ],
+  "categoryOrder": ["Server", "Schemas", "Middleware", "Types", "*"],
   "exclude": [
     "**/node_modules/**",
     "**/dist/**",

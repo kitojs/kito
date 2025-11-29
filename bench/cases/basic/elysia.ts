@@ -3,7 +3,6 @@ import { node } from "@elysiajs/node";
 
 declare const Bun: any;
 
-
 export function start(port: number): { stop: () => void } {
   const isBun = typeof Bun !== "undefined";
 

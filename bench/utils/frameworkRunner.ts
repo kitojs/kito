@@ -1,7 +1,9 @@
 const [, , benchName, frameworkName, portArg] = process.argv;
 
 if (!benchName || !frameworkName || !portArg) {
-  console.error("Missing arguments. Usage: frameworkRunner <bench> <framework> <port>");
+  console.error(
+    "Missing arguments. Usage: frameworkRunner <bench> <framework> <port>",
+  );
   process.exit(1);
 }
 
