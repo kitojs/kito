@@ -73,3 +73,5 @@ We welcome contributions! Check the [**contributing guide**](https://github.com/
 Licensed under the [MIT License](https://github.com/kitojs/kito/blob/main/license).
 
 ---
+
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/kitojs/kito)
