@@ -1,6 +1,6 @@
 import { server } from "kitojs";
 
 server()
-  .get("/", (ctx) => ctx.res.send("Hello world!"))
-  .post("/echo", (ctx) => ctx.res.json({ body: ctx.req.body }))
+  .get("/", ({ res }) => res.send("Hello world!"))
+  .post("/echo", ({ req, res }) => res.json({ body: req.body }))
   .listen(3000);

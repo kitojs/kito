@@ -2,8 +2,8 @@ import { server } from "kitojs";
 
 const app = server();
 
-app.get("/download", (ctx) => {
-  ctx.res.sendFile("public/banner.png", {
+app.get("/download", ({ res }) => {
+  res.sendFile("public/banner.png", {
     root: "./",
     maxAge: 3600,
     lastModified: true,
@@ -12,8 +12,8 @@ app.get("/download", (ctx) => {
   });
 });
 
-app.get("/export", (ctx) => {
-  ctx.res.download("public/banner.png", "kito-banner.png");
+app.get("/export", ({ res }) => {
+  res.download("public/banner.png", "kito-banner.png");
 });
 
 app.listen(3000);

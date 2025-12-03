@@ -20,9 +20,11 @@ const app = server().extend<{
 });
 
 app.get("/", (ctx) => {
-  ctx.res.json({
-    user: ctx.user.name,
-    users: ctx.db.query("SELECT * FROM users"),
+  const { res, db, user } = ctx;
+
+  res.json({
+    user: user.name,
+    users: db.query("SELECT * FROM users"),
   });
 });
 

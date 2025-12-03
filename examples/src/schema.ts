@@ -3,32 +3,38 @@ import { schema, server, t } from "kitojs";
 
 const app = server();
 
-const UserSchema = schema({
+const userSchema = schema({
   params: t.object({ id: t.str().uuid() }),
   query: t.object({ limit: t.num().min(1).max(100).default(10) }),
   body: t.object({ name: t.str().min(1) }),
 });
 
-app.get("/users/typed-only/:id", (ctx: Context<typeof UserSchema>) => {
-  const { id } = ctx.req.params;
-  const { limit } = ctx.req.query;
+type UserCtx = Context<typeof userSchema>;
 
-  ctx.res.send(`typed only: id=${id}, limit=${limit}`);
+app.get("/users/typed-only/:id", (ctx: UserCtx) => {
+  const { req, res } = ctx;
+
+  const { id } = req.params;
+  const { limit } = req.query;
+
+  res.send(`typed only: id=${id}, limit=${limit}`);
 });
 
-app.get("/users/validate-only/:id", [UserSchema], (ctx) => {
-  const { id } = ctx.req.params;
-  const { limit } = ctx.req.query;
+app.get("/users/validate-only/:id", [userSchema], ({ req, res }) => {
+  const { id } = req.params;
+  const { limit } = req.query;
 
-  ctx.res.send(`validation only: id=${id}, limit=${limit}`);
+  res.send(`validation only: id=${id}, limit=${limit}`);
 });
 
-app.post("/users/full/:id", [UserSchema], (ctx: Context<typeof UserSchema>) => {
-  const { id } = ctx.req.params;
-  const { limit } = ctx.req.query;
-  const { name } = ctx.req.body;
+app.post("/users/full/:id", [userSchema], (ctx: UserCtx) => {
+  const { req, res } = ctx;
 
-  ctx.res.json({ id, limit, name });
+  const { id } = req.params;
+  const { limit } = req.query;
+  const { name } = req.body;
+
+  res.json({ id, limit, name });
 });
 
 app.listen(3000);

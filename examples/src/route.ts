@@ -5,17 +5,17 @@ const app = server();
 // all under the "/" path
 const routes = app.route("/");
 
-routes.get((ctx) => {
-  ctx.res.send("hello world!");
+routes.get(({ res }) => {
+  res.send("hello world!");
 });
 
-routes.post((ctx) => {
-  ctx.res.json({ body: ctx.req.body });
+routes.post(({ req, res }) => {
+  res.json({ body: req.body });
 });
 
 // normal route
-app.get("/bye", (ctx) => {
-  ctx.res.send("bye!");
+app.get("/bye", ({ res }) => {
+  res.send("bye!");
 });
 
 app.listen(3000);
@@ -23,8 +23,8 @@ app.listen(3000);
 // fluent API style (using .end()):
 server()
   .route("/")
-  .get((ctx) => ctx.res.send("hello world!"))
-  .post((ctx) => ctx.res.json({ body: ctx.req.body }))
+  .get(({ res }) => res.send("hello world!"))
+  .post(({ req, res }) => res.json({ body: req.body }))
   .end() // end route "/" builder, returns to the server
-  .get("/bye", (ctx) => ctx.res.send("bye!"))
+  .get("/bye", ({ res }) => res.send("bye!"))
   .listen(3001);

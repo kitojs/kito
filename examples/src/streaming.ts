@@ -3,8 +3,8 @@ import { server } from "kitojs";
 const app = server();
 
 // streaming
-app.get("/stream", (ctx) => {
-  const stream = ctx.res.stream();
+app.get("/stream", ({ res }) => {
+  const stream = res.stream();
 
   stream.write("Chunk 1\n");
 
@@ -18,8 +18,8 @@ app.get("/stream", (ctx) => {
 });
 
 // sse
-app.get("/events", (ctx) => {
-  const sse = ctx.res.sse();
+app.get("/events", ({ res }) => {
+  const sse = res.sse();
 
   sse.send({ msg: "connected" }, "init");
 

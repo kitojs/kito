@@ -6,18 +6,20 @@ const app = server();
 // app.use(mw());
 
 const auth = middleware((ctx, next) => {
-  const header = ctx.req.headers.authorization;
+  const { req, res } = ctx;
+
+  const header = req.headers.authorization;
 
   if (header === "Bearer secret_token") {
     return next();
   }
 
-  ctx.res.status(401).send("unauthorized");
+  res.status(401).send("unauthorized");
 });
 
 // route middlewares
-app.get("/", [auth], (ctx) => {
-  ctx.res.send("secret!");
+app.get("/", [auth], ({ res }) => {
+  res.send("secret!");
 });
 
 app.listen(3000);
