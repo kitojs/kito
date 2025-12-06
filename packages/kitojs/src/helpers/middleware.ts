@@ -48,10 +48,8 @@ import type { MiddlewareDefinition, MiddlewareHandler } from "@kitojs/types";
  * });
  * ```
  */
-// biome-ignore lint/suspicious/noExplicitAny: ...
-export function middleware<TExtensions = any>(
-  // biome-ignore lint/suspicious/noExplicitAny: ...
-  handler: MiddlewareHandler<any, TExtensions>,
+export function middleware<TSchema = unknown, TExtensions = unknown>(
+  handler: MiddlewareHandler<TSchema, TExtensions>,
 ): MiddlewareDefinition {
   return {
     type: "function",
