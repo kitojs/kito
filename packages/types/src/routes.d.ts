@@ -1,6 +1,6 @@
 import type { MiddlewareHandler, RouteHandler } from "./handlers";
 import type { SchemaDefinition } from "./schema/base";
-import type { KitoServerInstance } from "./server";
+import type { KitoRouterInstance } from "./router";
 
 export type HttpMethod =
   | "GET"
@@ -12,12 +12,11 @@ export type HttpMethod =
   | "OPTIONS"
   | "TRACE";
 
-// biome-ignore lint/complexity/noBannedTypes: ...
-export interface RouteDefinition<TSchema extends SchemaDefinition = {}> {
+export interface RouteDefinition<TExtensions = unknown> {
   method: HttpMethod;
   path: string;
-  handler: RouteHandler<TSchema>;
-  schema?: TSchema;
+  middlewares: (MiddlewareDefinition | SchemaDefinition)[];
+  handler: RouteHandler<SchemaDefinition, TExtensions>;
 }
 
 export interface MiddlewareDefinition {
@@ -148,5 +147,5 @@ export type RouteChain<TExtensions = {}> = {
     handler?: RouteHandler<TSchema, TExtensions>,
   ): RouteChain<TExtensions>;
 
-  end(): KitoServerInstance<TExtensions>;
+  end(): KitoRouterInstance<TExtensions>;
 };
