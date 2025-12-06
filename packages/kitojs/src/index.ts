@@ -59,6 +59,18 @@
  *   ctx.res.json(users);
  * });
  * ```
+ *
+ * @example With routers
+ * ```typescript
+ * import { server, router } from 'kitojs';
+ *
+ * const apiRouter = router();
+ * apiRouter.get('/users', ({ res }) => res.json({ users: [] }));
+ *
+ * const app = server();
+ * app.mount('/api', apiRouter);
+ * app.listen(3000);
+ * ```
  */
 
 // biome-ignore assist/source/organizeImports: ...
@@ -68,4 +80,5 @@ export * from "./helpers/schema";
 export * from "./helpers/middleware";
 
 export * from "./server/server";
+export * from "./server/router";
 export * from "./types";
