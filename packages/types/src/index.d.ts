@@ -4,6 +4,7 @@ export * from "./http/response";
 export * from "./context";
 export * from "./handlers";
 export * from "./routes";
+export * from "./router";
 export * from "./server";
 
 export * from "./schema/base";
