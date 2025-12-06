@@ -5,9 +5,7 @@ import type {
   SchemaDefinition,
   ServerOptions,
   RouteHandler,
-  MiddlewareHandler,
   KitoContext,
-  RouteChain,
   KitoServerInstance,
 } from "@kitojs/types";
 
@@ -16,10 +14,11 @@ import { RequestBuilder } from "./request";
 import { ResponseBuilder } from "./response";
 
 import { analyzeHandler, type StaticResponseType } from "./analyzer";
+import { KitoRouter } from "./router";
 
 /**
  * Main server class for Kito framework.
- * Provides HTTP routing, middleware support, and context extensions.
+ * Extends Router to provide HTTP routing, middleware support, and adds server-specific functionality.
  *
  * @template TExtensions - Type of custom extensions added to the context
  *
@@ -36,9 +35,9 @@ import { analyzeHandler, type StaticResponseType } from "./analyzer";
  */
 // biome-ignore lint/complexity/noBannedTypes: ...
 export class KitoServer<TExtensions = {}>
+  extends KitoRouter<TExtensions>
   implements KitoServerInstance<TExtensions>
 {
-  private globalMiddlewares: MiddlewareDefinition[] = [];
   private serverOptions: ServerOptions = {};
 
   private coreServer: ServerCore;
@@ -56,6 +55,7 @@ export class KitoServer<TExtensions = {}>
    * @param options.timeout - Request timeout in milliseconds
    */
   constructor(options?: ServerOptions) {
+    super();
     this.serverOptions = { ...this.serverOptions, ...options };
     this.coreServer = new ServerCore({
       port: options?.unixSocket ? undefined : options?.port,
@@ -101,7 +101,8 @@ export class KitoServer<TExtensions = {}>
       this.serverOptions,
     );
 
-    newServer.globalMiddlewares = [...this.globalMiddlewares];
+    newServer.middlewares = [...this.middlewares];
+    newServer.routes = [...this.routes];
 
     newServer.coreServer = this.coreServer;
 
@@ -121,381 +122,8 @@ export class KitoServer<TExtensions = {}>
     return newServer;
   }
 
-  /**
-   * Registers a global middleware that runs for all routes.
-   *
-   * @param middleware - Middleware function or definition
-   * @returns The server instance for chaining
-   *
-   * @example
-   * ```typescript
-   * app.use((ctx, next) => {
-   *   console.log(`${ctx.req.method} ${ctx.req.url}`);
-   *   next();
-   * });
-   * ```
-   */
-  use(
-    middleware: MiddlewareDefinition | MiddlewareHandler,
-  ): KitoServer<TExtensions> {
-    if (typeof middleware === "function") {
-      this.globalMiddlewares.push({
-        type: "function",
-        handler: middleware,
-        global: true,
-      });
-    } else {
-      this.globalMiddlewares.push({ ...middleware, global: true });
-    }
-
-    return this as KitoServer<TExtensions>;
-  }
-
-  /**
-   * Registers a GET route.
-   *
-   * @template TSchema - Request schema type
-   * @param path - Route path (supports :params)
-   * @param handler - Route handler function
-   * @returns The server instance for chaining
-   *
-   * @example
-   * ```typescript
-   * app.get('/users/:id', ctx => {
-   *   ctx.res.json({ id: ctx.req.params.id });
-   * });
-   * ```
-   */
   // biome-ignore lint/complexity/noBannedTypes: ...
-  get<TSchema extends SchemaDefinition = {}>(
-    path: string,
-    handler: RouteHandler<TSchema, TExtensions>,
-  ): KitoServer<TExtensions>;
-  /**
-   * Registers a GET route with middlewares and/or schema validation.
-   *
-   * @template TSchema - Request schema type
-   * @param path - Route path
-   * @param middlewares - Array of middlewares and/or schema definition
-   * @param handler - Route handler function
-   * @returns The server instance for chaining
-   */
-  // biome-ignore lint/complexity/noBannedTypes: ...
-  get<TSchema extends SchemaDefinition = {}>(
-    path: string,
-    middlewares: (MiddlewareDefinition | TSchema)[],
-    handler: RouteHandler<TSchema, TExtensions>,
-  ): KitoServer<TExtensions>;
-  // biome-ignore lint/complexity/noBannedTypes: ...
-  get<TSchema extends SchemaDefinition = {}>(
-    path: string,
-    middlewaresOrHandler:
-      | (MiddlewareDefinition | TSchema)[]
-      | RouteHandler<TSchema, TExtensions>,
-    handler?: RouteHandler<TSchema, TExtensions>,
-  ): KitoServer<TExtensions> {
-    this.addRoute<TSchema>("GET", path, middlewaresOrHandler, handler);
-
-    return this as KitoServer<TExtensions>;
-  }
-
-  /**
-   * Registers a POST route.
-   *
-   * @template TSchema - Request schema type
-   * @param path - Route path
-   * @param handler - Route handler function
-   * @returns The server instance for chaining
-   */
-  // biome-ignore lint/complexity/noBannedTypes: ...
-  post<TSchema extends SchemaDefinition = {}>(
-    path: string,
-    handler: RouteHandler<TSchema, TExtensions>,
-  ): KitoServer<TExtensions>;
-  // biome-ignore lint/complexity/noBannedTypes: ...
-  post<TSchema extends SchemaDefinition = {}>(
-    path: string,
-    middlewares: (MiddlewareDefinition | TSchema)[],
-    handler: RouteHandler<TSchema, TExtensions>,
-  ): KitoServer<TExtensions>;
-  // biome-ignore lint/complexity/noBannedTypes: ...
-  post<TSchema extends SchemaDefinition = {}>(
-    path: string,
-    middlewaresOrHandler:
-      | (MiddlewareDefinition | TSchema)[]
-      | RouteHandler<TSchema, TExtensions>,
-    handler?: RouteHandler<TSchema, TExtensions>,
-  ): KitoServer<TExtensions> {
-    this.addRoute<TSchema>("POST", path, middlewaresOrHandler, handler);
-
-    return this as KitoServer<TExtensions>;
-  }
-
-  /**
-   * Registers a PUT route.
-   *
-   * @template TSchema - Request schema type
-   * @param path - Route path
-   * @param handler - Route handler function
-   * @returns The server instance for chaining
-   */
-  // biome-ignore lint/complexity/noBannedTypes: ...
-  put<TSchema extends SchemaDefinition = {}>(
-    path: string,
-    handler: RouteHandler<TSchema, TExtensions>,
-  ): KitoServer<TExtensions>;
-  // biome-ignore lint/complexity/noBannedTypes: ...
-  put<TSchema extends SchemaDefinition = {}>(
-    path: string,
-    middlewares: (MiddlewareDefinition | TSchema)[],
-    handler: RouteHandler<TSchema, TExtensions>,
-  ): KitoServer<TExtensions>;
-  // biome-ignore lint/complexity/noBannedTypes: ...
-  put<TSchema extends SchemaDefinition = {}>(
-    path: string,
-    middlewaresOrHandler:
-      | (MiddlewareDefinition | TSchema)[]
-      | RouteHandler<TSchema, TExtensions>,
-    handler?: RouteHandler<TSchema, TExtensions>,
-  ): KitoServer<TExtensions> {
-    this.addRoute<TSchema>("PUT", path, middlewaresOrHandler, handler);
-
-    return this as KitoServer<TExtensions>;
-  }
-
-  /**
-   * Registers a DELETE route.
-   *
-   * @template TSchema - Request schema type
-   * @param path - Route path
-   * @param handler - Route handler function
-   * @returns The server instance for chaining
-   */
-  // biome-ignore lint/complexity/noBannedTypes: ...
-  delete<TSchema extends SchemaDefinition = {}>(
-    path: string,
-    handler: RouteHandler<TSchema, TExtensions>,
-  ): KitoServer<TExtensions>;
-  // biome-ignore lint/complexity/noBannedTypes: ...
-  delete<TSchema extends SchemaDefinition = {}>(
-    path: string,
-    middlewares: (MiddlewareDefinition | TSchema)[],
-    handler: RouteHandler<TSchema, TExtensions>,
-  ): KitoServer<TExtensions>;
-  // biome-ignore lint/complexity/noBannedTypes: ...
-  delete<TSchema extends SchemaDefinition = {}>(
-    path: string,
-    middlewaresOrHandler:
-      | (MiddlewareDefinition | TSchema)[]
-      | RouteHandler<TSchema, TExtensions>,
-    handler?: RouteHandler<TSchema, TExtensions>,
-  ): KitoServer<TExtensions> {
-    this.addRoute<TSchema>("DELETE", path, middlewaresOrHandler, handler);
-
-    return this as KitoServer<TExtensions>;
-  }
-
-  /**
-   * Registers a PATCH route.
-   *
-   * @template TSchema - Request schema type
-   * @param path - Route path
-   * @param handler - Route handler function
-   * @returns The server instance for chaining
-   */
-  // biome-ignore lint/complexity/noBannedTypes: ...
-  patch<TSchema extends SchemaDefinition = {}>(
-    path: string,
-    handler: RouteHandler<TSchema, TExtensions>,
-  ): KitoServer<TExtensions>;
-  // biome-ignore lint/complexity/noBannedTypes: ...
-  patch<TSchema extends SchemaDefinition = {}>(
-    path: string,
-    middlewares: (MiddlewareDefinition | TSchema)[],
-    handler: RouteHandler<TSchema, TExtensions>,
-  ): KitoServer<TExtensions>;
-  // biome-ignore lint/complexity/noBannedTypes: ...
-  patch<TSchema extends SchemaDefinition = {}>(
-    path: string,
-    middlewaresOrHandler:
-      | (MiddlewareDefinition | TSchema)[]
-      | RouteHandler<TSchema, TExtensions>,
-    handler?: RouteHandler<TSchema, TExtensions>,
-  ): KitoServer<TExtensions> {
-    this.addRoute<TSchema>("PATCH", path, middlewaresOrHandler, handler);
-
-    return this as KitoServer<TExtensions>;
-  }
-
-  /**
-   * Registers a HEAD route.
-   *
-   * @template TSchema - Request schema type
-   * @param path - Route path
-   * @param handler - Route handler function
-   * @returns The server instance for chaining
-   */
-  // biome-ignore lint/complexity/noBannedTypes: ...
-  head<TSchema extends SchemaDefinition = {}>(
-    path: string,
-    handler: RouteHandler<TSchema, TExtensions>,
-  ): KitoServer<TExtensions>;
-  // biome-ignore lint/complexity/noBannedTypes: ...
-  head<TSchema extends SchemaDefinition = {}>(
-    path: string,
-    middlewares: (MiddlewareDefinition | TSchema)[],
-    handler: RouteHandler<TSchema, TExtensions>,
-  ): KitoServer<TExtensions>;
-  // biome-ignore lint/complexity/noBannedTypes: ...
-  head<TSchema extends SchemaDefinition = {}>(
-    path: string,
-    middlewaresOrHandler:
-      | (MiddlewareDefinition | TSchema)[]
-      | RouteHandler<TSchema, TExtensions>,
-    handler?: RouteHandler<TSchema, TExtensions>,
-  ): KitoServer<TExtensions> {
-    this.addRoute<TSchema>("HEAD", path, middlewaresOrHandler, handler);
-
-    return this as KitoServer<TExtensions>;
-  }
-
-  /**
-   * Registers an OPTIONS route.
-   *
-   * @template TSchema - Request schema type
-   * @param path - Route path
-   * @param handler - Route handler function
-   * @returns The server instance for chaining
-   */
-  // biome-ignore lint/complexity/noBannedTypes: ...
-  options<TSchema extends SchemaDefinition = {}>(
-    path: string,
-    handler: RouteHandler<TSchema, TExtensions>,
-  ): KitoServer<TExtensions>;
-  // biome-ignore lint/complexity/noBannedTypes: ...
-  options<TSchema extends SchemaDefinition = {}>(
-    path: string,
-    middlewares: (MiddlewareDefinition | TSchema)[],
-    handler: RouteHandler<TSchema, TExtensions>,
-  ): KitoServer<TExtensions>;
-  // biome-ignore lint/complexity/noBannedTypes: ...
-  options<TSchema extends SchemaDefinition = {}>(
-    path: string,
-    middlewaresOrHandler:
-      | (MiddlewareDefinition | TSchema)[]
-      | RouteHandler<TSchema, TExtensions>,
-    handler?: RouteHandler<TSchema, TExtensions>,
-  ): KitoServer<TExtensions> {
-    this.addRoute<TSchema>("OPTIONS", path, middlewaresOrHandler, handler);
-
-    return this as KitoServer<TExtensions>;
-  }
-
-  /**
-   * Creates a route builder for chaining multiple HTTP methods on the same path.
-   *
-   * @param path - Base path for all routes in the chain
-   * @returns Route chain builder
-   *
-   * @example
-   * ```typescript
-   * app.route('/api/users')
-   *   .get(ctx => ctx.res.json(users))
-   *   .post(ctx => ctx.res.json({ created: true }))
-   *   .end();
-   * ```
-   */
-  route(path: string): RouteChain<TExtensions> {
-    const self = this;
-
-    const chain: RouteChain<TExtensions> = {
-      // biome-ignore lint/complexity/noBannedTypes: ...
-      get<TSchema extends SchemaDefinition = {}>(
-        middlewaresOrHandler:
-          | (MiddlewareDefinition | TSchema)[]
-          | RouteHandler<TSchema, TExtensions>,
-        handler?: RouteHandler<TSchema, TExtensions>,
-      ): RouteChain<TExtensions> {
-        self.addRoute("GET", path, middlewaresOrHandler, handler);
-        return chain;
-      },
-
-      // biome-ignore lint/complexity/noBannedTypes: ...
-      post<TSchema extends SchemaDefinition = {}>(
-        middlewaresOrHandler:
-          | (MiddlewareDefinition | TSchema)[]
-          | RouteHandler<TSchema, TExtensions>,
-        handler?: RouteHandler<TSchema, TExtensions>,
-      ): RouteChain<TExtensions> {
-        self.addRoute("POST", path, middlewaresOrHandler, handler);
-        return chain;
-      },
-
-      // biome-ignore lint/complexity/noBannedTypes: ...
-      put<TSchema extends SchemaDefinition = {}>(
-        middlewaresOrHandler:
-          | (MiddlewareDefinition | TSchema)[]
-          | RouteHandler<TSchema, TExtensions>,
-        handler?: RouteHandler<TSchema, TExtensions>,
-      ): RouteChain<TExtensions> {
-        self.addRoute("PUT", path, middlewaresOrHandler, handler);
-        return chain;
-      },
-
-      // biome-ignore lint/complexity/noBannedTypes: ...
-      delete<TSchema extends SchemaDefinition = {}>(
-        middlewaresOrHandler:
-          | (MiddlewareDefinition | TSchema)[]
-          | RouteHandler<TSchema, TExtensions>,
-        handler?: RouteHandler<TSchema, TExtensions>,
-      ): RouteChain<TExtensions> {
-        self.addRoute("DELETE", path, middlewaresOrHandler, handler);
-        return chain;
-      },
-
-      // biome-ignore lint/complexity/noBannedTypes: ...
-      patch<TSchema extends SchemaDefinition = {}>(
-        middlewaresOrHandler:
-          | (MiddlewareDefinition | TSchema)[]
-          | RouteHandler<TSchema, TExtensions>,
-        handler?: RouteHandler<TSchema, TExtensions>,
-      ): RouteChain<TExtensions> {
-        self.addRoute("PATCH", path, middlewaresOrHandler, handler);
-        return chain;
-      },
-
-      // biome-ignore lint/complexity/noBannedTypes: ...
-      options<TSchema extends SchemaDefinition = {}>(
-        middlewaresOrHandler:
-          | (MiddlewareDefinition | TSchema)[]
-          | RouteHandler<TSchema, TExtensions>,
-        handler?: RouteHandler<TSchema, TExtensions>,
-      ): RouteChain<TExtensions> {
-        self.addRoute("OPTIONS", path, middlewaresOrHandler, handler);
-        return chain;
-      },
-
-      // biome-ignore lint/complexity/noBannedTypes: ...
-      head<TSchema extends SchemaDefinition = {}>(
-        middlewaresOrHandler:
-          | (MiddlewareDefinition | TSchema)[]
-          | RouteHandler<TSchema, TExtensions>,
-        handler?: RouteHandler<TSchema, TExtensions>,
-      ): RouteChain<TExtensions> {
-        self.addRoute("HEAD", path, middlewaresOrHandler, handler);
-        return chain;
-      },
-
-      end(): KitoServer<TExtensions> {
-        return self;
-      },
-    };
-
-    return chain;
-  }
-
-  // biome-ignore lint/complexity/noBannedTypes: ...
-  private addRoute<TSchema extends SchemaDefinition = {}>(
+  protected override addRoute<TSchema extends SchemaDefinition = {}>(
     method: HttpMethod,
     path: string,
     middlewaresOrHandler:
@@ -503,23 +131,46 @@ export class KitoServer<TExtensions = {}>
       | RouteHandler<TSchema, TExtensions>,
     handler?: RouteHandler<TSchema, TExtensions>,
   ): void {
-    let finalHandler: RouteHandler<TSchema, TExtensions>;
-    let middlewares: (MiddlewareDefinition | TSchema)[] = [];
+    super.addRoute(method, path, middlewaresOrHandler, handler);
 
-    if (typeof middlewaresOrHandler === "function") {
-      finalHandler = middlewaresOrHandler as RouteHandler<TSchema, TExtensions>;
-    } else {
-      middlewares = middlewaresOrHandler as (MiddlewareDefinition | TSchema)[];
-      // biome-ignore lint/style/noNonNullAssertion: ...
-      finalHandler = handler!;
+    const route = this.routes[this.routes.length - 1];
+
+    this.registerRouteWithCore(route);
+  }
+
+  override mount(path: string, router: KitoRouter<TExtensions>): this {
+    const routesToMount = (router as KitoRouter<TExtensions>)["routes"];
+
+    super.mount(path, router);
+    const normalizedPath = this["normalizePath"](path);
+
+    for (const route of routesToMount) {
+      const prefixedRoute = {
+        ...route,
+        path: normalizedPath + route.path,
+      };
+      this.registerRouteWithCore(prefixedRoute);
     }
 
+    return this;
+  }
+
+  private registerRouteWithCore(
+    // biome-ignore lint/suspicious/noExplicitAny: ...
+    route: any,
+  ): void {
+    let finalHandler: RouteHandler<SchemaDefinition, TExtensions>;
+    let middlewares: (MiddlewareDefinition | SchemaDefinition)[] = [];
+
+    finalHandler = route.handler;
+    middlewares = route.middlewares || [];
+
     const routeMiddlewares: MiddlewareDefinition[] = [];
-    let routeSchema: TSchema | undefined;
+    let routeSchema: SchemaDefinition | undefined;
 
     for (const item of middlewares) {
       if (this.isSchemaDefinition(item)) {
-        routeSchema = item as TSchema;
+        routeSchema = item as SchemaDefinition;
         routeMiddlewares.push({
           type: "schema",
           // biome-ignore lint/suspicious/noExplicitAny: ...
@@ -536,17 +187,17 @@ export class KitoServer<TExtensions = {}>
 
     let staticResponse: StaticResponseType = { type: "none" };
 
-    if (this.globalMiddlewares.length === 0 && routeMiddlewares.length === 0) {
+    if (this.middlewares.length === 0 && routeMiddlewares.length === 0) {
       staticResponse = analyzeHandler(finalHandler);
     }
 
     const fusedHandler = this.fuseMiddlewares(
-      this.globalMiddlewares,
+      this.middlewares,
       routeMiddlewares,
       finalHandler,
     );
 
-    const routeHandler = async (ctx: KitoContext<TSchema>) => {
+    const routeHandler = async (ctx: KitoContext<SchemaDefinition>) => {
       const reqBuilder = new RequestBuilder(ctx.req);
       const resBuilder = new ResponseBuilder(ctx.res);
 
@@ -570,8 +221,8 @@ export class KitoServer<TExtensions = {}>
         : undefined;
 
     this.coreServer.addRoute({
-      method,
-      path,
+      method: route.method,
+      path: route.path,
       handler: routeHandler,
       schema: schemaJson,
       staticResponse: staticResponseJson,
