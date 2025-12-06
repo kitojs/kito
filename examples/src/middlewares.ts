@@ -7,7 +7,6 @@ const app = server();
 
 const auth = middleware((ctx, next) => {
   const { req, res } = ctx;
-
   const header = req.headers.authorization;
 
   if (header === "Bearer secret_token") {
