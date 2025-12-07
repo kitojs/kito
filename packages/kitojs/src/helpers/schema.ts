@@ -1,4 +1,11 @@
-import type { SchemaDefinition } from "@kitojs/types";
+// biome-ignore assist/source/organizeImports: ...
+import type {
+  SchemaDefinition,
+  JSONSchemaDefinition,
+  InferJSONSchemaRequest,
+} from "@kitojs/types";
+
+import { convertJSONSchema } from "../schemas/jsonSchema";
 
 /**
  * Creates a typed schema definition for request validation.
@@ -39,3 +46,71 @@ import type { SchemaDefinition } from "@kitojs/types";
 export function schema<T extends SchemaDefinition>(definition: T): T {
   return definition;
 }
+
+/**
+ * Converts a JSON Schema definition to internal schema format
+ * @template T - JSON Schema definition type
+ * @param definition - JSON Schema definition object
+ * @returns Converted schema definition with preserved types
+ *
+ * @example
+ * ```typescript
+ * import { schema } from 'kitojs';
+ *
+ * const userSchema = schema.json({
+ *   params: {
+ *     type: 'object',
+ *     properties: {
+ *       id: { type: 'string', format: 'uuid' }
+ *     },
+ *     required: ['id']
+ *   },
+ *   body: {
+ *     type: 'object',
+ *     properties: {
+ *       name: { type: 'string', minLength: 1 },
+ *       email: { type: 'string', format: 'email' }
+ *     },
+ *     required: ['name', 'email']
+ *   }
+ * });
+ *
+ * app.post('/users/:id', ({ req, res }) => {
+ *   // types are inferred from JSON Schema
+ *   const id = req.params.id; // string
+ *   const name = req.body.name; // string
+ * }, userSchema);
+ * ```
+ */
+schema.json = <T extends JSONSchemaDefinition>(
+  definition: T,
+): SchemaDefinition & {
+  __jsonSchemaInfer: InferJSONSchemaRequest<T>;
+} => {
+  // biome-ignore lint/suspicious/noExplicitAny: ...
+  const converted: any = {};
+
+  if (definition.params) {
+    converted.params = convertJSONSchema(definition.params);
+  }
+  if (definition.query) {
+    converted.query = convertJSONSchema(definition.query);
+  }
+  if (definition.body) {
+    converted.body = convertJSONSchema(definition.body);
+  }
+  if (definition.headers) {
+    converted.headers = convertJSONSchema(definition.headers);
+  }
+  if (definition.response) {
+    converted.response = {};
+    for (const [statusCode, responseSchema] of Object.entries(
+      definition.response,
+    )) {
+      converted.response[statusCode] = convertJSONSchema(responseSchema);
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: ...
+  return converted as any;
+};

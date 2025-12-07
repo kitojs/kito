@@ -32,4 +32,43 @@ app.post(
   userSchema,
 );
 
+// JSON Schema
+
+const userSchemaJSON = schema.json({
+  params: {
+    type: "object",
+    properties: {
+      id: { type: "string", format: "uuid" },
+    },
+    required: ["id"],
+  },
+  query: {
+    type: "object",
+    properties: {
+      limit: { type: "number", maximum: 100 },
+    },
+    required: ["limit"],
+  },
+  body: {
+    type: "object",
+    properties: {
+      name: { type: "string", minLength: 1 },
+    },
+    required: ["name"],
+  },
+});
+
+app.put(
+  "/users/json/:id",
+  ({ req, res }) => {
+    // types are automatically inferred from userSchemaJSON
+    const { id } = req.params;
+    const { limit } = req.query;
+    const { name } = req.body;
+
+    res.json({ id, limit, name });
+  },
+  userSchemaJSON,
+);
+
 app.listen(3000);
