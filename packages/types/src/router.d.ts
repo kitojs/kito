@@ -140,4 +140,8 @@ export interface KitoRouterInstance<TExtensions = {}> {
   ): KitoRouterInstance<TExtensions>;
 
   route(path: string): RouteChain<TExtensions>;
+  route(
+    path: string,
+    middlewares: MiddlewareDefinition[],
+  ): RouteChain<TExtensions>;
 }

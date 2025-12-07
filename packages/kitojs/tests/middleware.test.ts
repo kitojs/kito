@@ -41,4 +41,76 @@ describe("Middleware Helper", () => {
     expect(asyncMw.handler).toBeDefined();
     expect(asyncMw.handler?.constructor.name).toBe("AsyncFunction");
   });
+
+  it("should work with route() method", async () => {
+    const { server } = await import("../src");
+
+    const executionLog: string[] = [];
+
+    const authMiddleware = middleware((ctx, next) => {
+      executionLog.push("auth");
+      next();
+    });
+
+    const app = server();
+
+    app
+      .route("/admin", [authMiddleware])
+      .get(({ res }) => {
+        executionLog.push("get-handler");
+        res.send("Admin GET");
+      })
+      .post(({ res }) => {
+        executionLog.push("post-handler");
+        res.send("Admin POST");
+      });
+
+    const routes = app["routes"];
+    expect(routes).toHaveLength(2);
+
+    expect(routes[0].middlewares).toHaveLength(1);
+    expect(routes[1].middlewares).toHaveLength(1);
+    expect(routes[0].middlewares[0]).toBe(authMiddleware);
+    expect(routes[1].middlewares[0]).toBe(authMiddleware);
+  });
+
+  it("should combine route and call-level middlewares", async () => {
+    const { server, middleware } = await import("../src");
+
+    const routeLevelMw = middleware((_, next) => next());
+    const callLevelMw = middleware((_, next) => next());
+
+    const app = server();
+
+    app.route("/admin", [routeLevelMw]).get([callLevelMw], ({ res }) => {
+      res.send("Admin");
+    });
+
+    const routes = app["routes"];
+    expect(routes).toHaveLength(1);
+    expect(routes[0].middlewares).toHaveLength(2);
+    expect(routes[0].middlewares[0]).toBe(routeLevelMw);
+    expect(routes[0].middlewares[1]).toBe(callLevelMw);
+  });
+
+  it("should execute route middleware before handler", async () => {
+    const { server, middleware } = await import("../src");
+
+    const executionOrder: string[] = [];
+
+    const authMw = middleware((_, next) => {
+      executionOrder.push("route-middleware");
+      next();
+    });
+
+    const app = server();
+
+    app.route("/protected", [authMw]).get(({ res }) => {
+      executionOrder.push("handler");
+      res.send("Protected");
+    });
+
+    const routes = app["routes"];
+    expect(routes[0].middlewares[0]).toBe(authMw);
+  });
 });
