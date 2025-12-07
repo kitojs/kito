@@ -28,12 +28,12 @@ import type { SchemaDefinition } from "@kitojs/types";
  *   })
  * });
  *
- * app.post('/users/:id', [userSchema], ctx => {
+ * app.post('/users/:id', ({ req, res }) => {
  *   // All request parts are type-safe and validated
- *   const id = ctx.req.params.id; // string (UUID validated)
- *   const limit = ctx.req.query.limit; // number
- *   const name = ctx.req.body.name; // string
- * });
+ *   const id = req.params.id; // string (UUID validated)
+ *   const limit = req.query.limit; // number
+ *   const name = req.body.name; // string
+ * }, userSchema);
  * ```
  */
 export function schema<T extends SchemaDefinition>(definition: T): T {

@@ -39,10 +39,15 @@ export type RouteChain<TExtensions = {}> = {
   ): RouteChain<TExtensions>;
   // biome-ignore lint/complexity/noBannedTypes: ...
   get<TSchema extends SchemaDefinition = {}>(
+    handler: RouteHandler<TSchema, TExtensions>,
+    schema: TSchema,
+  ): RouteChain<TExtensions>;
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  get<TSchema extends SchemaDefinition = {}>(
     middlewaresOrHandler:
       | (MiddlewareDefinition | TSchema)[]
       | RouteHandler<TSchema, TExtensions>,
-    handler?: RouteHandler<TSchema, TExtensions>,
+    handler?: RouteHandler<TSchema, TExtensions> | TSchema,
   ): RouteChain<TExtensions>;
 
   // biome-ignore lint/complexity/noBannedTypes: ...
@@ -56,10 +61,15 @@ export type RouteChain<TExtensions = {}> = {
   ): RouteChain<TExtensions>;
   // biome-ignore lint/complexity/noBannedTypes: ...
   post<TSchema extends SchemaDefinition = {}>(
+    handler: RouteHandler<TSchema, TExtensions>,
+    schema: TSchema,
+  ): RouteChain<TExtensions>;
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  post<TSchema extends SchemaDefinition = {}>(
     middlewaresOrHandler:
       | (MiddlewareDefinition | TSchema)[]
       | RouteHandler<TSchema, TExtensions>,
-    handler?: RouteHandler<TSchema, TExtensions>,
+    handler?: RouteHandler<TSchema, TExtensions> | TSchema,
   ): RouteChain<TExtensions>;
 
   // biome-ignore lint/complexity/noBannedTypes: ...
@@ -73,10 +83,15 @@ export type RouteChain<TExtensions = {}> = {
   ): RouteChain<TExtensions>;
   // biome-ignore lint/complexity/noBannedTypes: ...
   put<TSchema extends SchemaDefinition = {}>(
+    handler: RouteHandler<TSchema, TExtensions>,
+    schema: TSchema,
+  ): RouteChain<TExtensions>;
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  put<TSchema extends SchemaDefinition = {}>(
     middlewaresOrHandler:
       | (MiddlewareDefinition | TSchema)[]
       | RouteHandler<TSchema, TExtensions>,
-    handler?: RouteHandler<TSchema, TExtensions>,
+    handler?: RouteHandler<TSchema, TExtensions> | TSchema,
   ): RouteChain<TExtensions>;
 
   // biome-ignore lint/complexity/noBannedTypes: ...
@@ -90,10 +105,15 @@ export type RouteChain<TExtensions = {}> = {
   ): RouteChain<TExtensions>;
   // biome-ignore lint/complexity/noBannedTypes: ...
   delete<TSchema extends SchemaDefinition = {}>(
+    handler: RouteHandler<TSchema, TExtensions>,
+    schema: TSchema,
+  ): RouteChain<TExtensions>;
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  delete<TSchema extends SchemaDefinition = {}>(
     middlewaresOrHandler:
       | (MiddlewareDefinition | TSchema)[]
       | RouteHandler<TSchema, TExtensions>,
-    handler?: RouteHandler<TSchema, TExtensions>,
+    handler?: RouteHandler<TSchema, TExtensions> | TSchema,
   ): RouteChain<TExtensions>;
 
   // biome-ignore lint/complexity/noBannedTypes: ...
@@ -107,10 +127,15 @@ export type RouteChain<TExtensions = {}> = {
   ): RouteChain<TExtensions>;
   // biome-ignore lint/complexity/noBannedTypes: ...
   patch<TSchema extends SchemaDefinition = {}>(
+    handler: RouteHandler<TSchema, TExtensions>,
+    schema: TSchema,
+  ): RouteChain<TExtensions>;
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  patch<TSchema extends SchemaDefinition = {}>(
     middlewaresOrHandler:
       | (MiddlewareDefinition | TSchema)[]
       | RouteHandler<TSchema, TExtensions>,
-    handler?: RouteHandler<TSchema, TExtensions>,
+    handler?: RouteHandler<TSchema, TExtensions> | TSchema,
   ): RouteChain<TExtensions>;
 
   // biome-ignore lint/complexity/noBannedTypes: ...
@@ -124,10 +149,15 @@ export type RouteChain<TExtensions = {}> = {
   ): RouteChain<TExtensions>;
   // biome-ignore lint/complexity/noBannedTypes: ...
   head<TSchema extends SchemaDefinition = {}>(
+    handler: RouteHandler<TSchema, TExtensions>,
+    schema: TSchema,
+  ): RouteChain<TExtensions>;
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  head<TSchema extends SchemaDefinition = {}>(
     middlewaresOrHandler:
       | (MiddlewareDefinition | TSchema)[]
       | RouteHandler<TSchema, TExtensions>,
-    handler?: RouteHandler<TSchema, TExtensions>,
+    handler?: RouteHandler<TSchema, TExtensions> | TSchema,
   ): RouteChain<TExtensions>;
 
   // biome-ignore lint/complexity/noBannedTypes: ...
@@ -141,10 +171,15 @@ export type RouteChain<TExtensions = {}> = {
   ): RouteChain<TExtensions>;
   // biome-ignore lint/complexity/noBannedTypes: ...
   options<TSchema extends SchemaDefinition = {}>(
+    handler: RouteHandler<TSchema, TExtensions>,
+    schema: TSchema,
+  ): RouteChain<TExtensions>;
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  options<TSchema extends SchemaDefinition = {}>(
     middlewaresOrHandler:
       | (MiddlewareDefinition | TSchema)[]
       | RouteHandler<TSchema, TExtensions>,
-    handler?: RouteHandler<TSchema, TExtensions>,
+    handler?: RouteHandler<TSchema, TExtensions> | TSchema,
   ): RouteChain<TExtensions>;
 
   end(): KitoRouterInstance<TExtensions>;

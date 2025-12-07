@@ -288,11 +288,6 @@ export class KitoServer<TExtensions = {}>
     };
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: ...
-  private isSchemaDefinition(item: any): item is SchemaDefinition {
-    return item && (item.params || item.query || item.body || item.headers);
-  }
-
   /**
    * Starts the server.
    *
