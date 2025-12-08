@@ -253,6 +253,63 @@ export class KitoServer<TExtensions = {}>
     return JSON.stringify(serialized);
   }
 
+  private registerCatchAllRoute(): void {
+    const hasCatchAll = this.routes.some(
+      (route) =>
+        route.path === "{*path}" || route.path === "/*" || route.path === "*",
+    );
+
+    if (hasCatchAll) return;
+
+    const catchAllHandler: RouteHandler<SchemaDefinition, TExtensions> = (
+      ctx,
+    ) => {
+      try {
+        ctx.res.status(404).send("Not Found");
+      } catch {}
+    };
+
+    const fusedHandler = this.fuseMiddlewares(
+      this.middlewares,
+      [],
+      catchAllHandler,
+    );
+
+    const routeHandler = async (ctx: KitoContext<SchemaDefinition>) => {
+      const reqBuilder = new RequestBuilder(ctx.req);
+      const resBuilder = new ResponseBuilder(ctx.res);
+
+      // biome-ignore lint/suspicious/noExplicitAny: ...
+      const context: any = { req: reqBuilder, res: resBuilder };
+
+      if (this.extensionFn) {
+        this.extensionFn(context);
+      }
+
+      await fusedHandler(context);
+    };
+
+    const methods: HttpMethod[] = [
+      "GET",
+      "POST",
+      "PUT",
+      "DELETE",
+      "PATCH",
+      "HEAD",
+      "OPTIONS",
+    ];
+
+    for (const method of methods) {
+      this.coreServer.addRoute({
+        method,
+        path: "{*path}",
+        handler: routeHandler,
+        schema: undefined,
+        staticResponse: undefined,
+      });
+    }
+  }
+
   private fuseMiddlewares<TSchema extends SchemaDefinition>(
     globals: MiddlewareDefinition[],
     routeMiddlewares: MiddlewareDefinition[],
@@ -365,6 +422,10 @@ export class KitoServer<TExtensions = {}>
     const finalHost = finalUnixSocket
       ? undefined
       : (host ?? this.serverOptions.host ?? "0.0.0.0");
+
+    if (this.middlewares.length > 0) {
+      this.registerCatchAllRoute();
+    }
 
     const configuration: ServerOptionsCore = {
       port: finalPort,
