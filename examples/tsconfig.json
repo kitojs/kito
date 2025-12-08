@@ -1,6 +1,13 @@
 {
   "extends": "../tsconfig.base.json",
   "compilerOptions": {},
-  "include": ["src/*.ts"],
-  "references": [{ "path": "../packages/kitojs" }]
+  "include": [
+    "instance/**/*",
+    "fluent/**/*"
+  ],
+  "references": [
+    {
+      "path": "../packages/kitojs"
+    }
+  ]
 }

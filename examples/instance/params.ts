@@ -3,9 +3,7 @@ import { server } from "kitojs";
 const app = server();
 
 app.get("/:id", ({ req, res }) => {
-  const { id } = req.params;
-
-  res.send(id);
+  res.send(req.params.id);
 });
 
 app.get("/multi/:id/:name", ({ req, res }) => {
