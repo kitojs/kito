@@ -115,12 +115,26 @@ export class KitoRouter<TExtensions = {}>
   // biome-ignore lint/complexity/noBannedTypes: ...
   get<TSchema extends SchemaDefinition = {}>(
     path: string,
+    middlewares: (MiddlewareDefinition | TSchema)[],
+    handler: RouteHandler<TSchema, TExtensions>,
+    schema: TSchema,
+  ): this;
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  get<TSchema extends SchemaDefinition = {}>(
+    path: string,
     middlewaresOrHandler:
       | (MiddlewareDefinition | TSchema)[]
       | RouteHandler<TSchema, TExtensions>,
     handlerOrSchema?: RouteHandler<TSchema, TExtensions> | TSchema,
+    schema?: TSchema,
   ): this {
-    this.addRoute<TSchema>("GET", path, middlewaresOrHandler, handlerOrSchema);
+    this.addRoute<TSchema>(
+      "GET",
+      path,
+      middlewaresOrHandler,
+      handlerOrSchema,
+      schema,
+    );
     return this;
   }
 
@@ -147,12 +161,26 @@ export class KitoRouter<TExtensions = {}>
   // biome-ignore lint/complexity/noBannedTypes: ...
   post<TSchema extends SchemaDefinition = {}>(
     path: string,
+    middlewares: (MiddlewareDefinition | TSchema)[],
+    handler: RouteHandler<TSchema, TExtensions>,
+    schema: TSchema,
+  ): this;
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  post<TSchema extends SchemaDefinition = {}>(
+    path: string,
     middlewaresOrHandler:
       | (MiddlewareDefinition | TSchema)[]
       | RouteHandler<TSchema, TExtensions>,
     handlerOrSchema?: RouteHandler<TSchema, TExtensions> | TSchema,
+    schema?: TSchema,
   ): this {
-    this.addRoute<TSchema>("POST", path, middlewaresOrHandler, handlerOrSchema);
+    this.addRoute<TSchema>(
+      "POST",
+      path,
+      middlewaresOrHandler,
+      handlerOrSchema,
+      schema,
+    );
     return this;
   }
 
@@ -179,12 +207,26 @@ export class KitoRouter<TExtensions = {}>
   // biome-ignore lint/complexity/noBannedTypes: ...
   put<TSchema extends SchemaDefinition = {}>(
     path: string,
+    middlewares: (MiddlewareDefinition | TSchema)[],
+    handler: RouteHandler<TSchema, TExtensions>,
+    schema: TSchema,
+  ): this;
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  put<TSchema extends SchemaDefinition = {}>(
+    path: string,
     middlewaresOrHandler:
       | (MiddlewareDefinition | TSchema)[]
       | RouteHandler<TSchema, TExtensions>,
     handlerOrSchema?: RouteHandler<TSchema, TExtensions> | TSchema,
+    schema?: TSchema,
   ): this {
-    this.addRoute<TSchema>("PUT", path, middlewaresOrHandler, handlerOrSchema);
+    this.addRoute<TSchema>(
+      "PUT",
+      path,
+      middlewaresOrHandler,
+      handlerOrSchema,
+      schema,
+    );
     return this;
   }
 
@@ -211,16 +253,25 @@ export class KitoRouter<TExtensions = {}>
   // biome-ignore lint/complexity/noBannedTypes: ...
   delete<TSchema extends SchemaDefinition = {}>(
     path: string,
+    middlewares: (MiddlewareDefinition | TSchema)[],
+    handler: RouteHandler<TSchema, TExtensions>,
+    schema: TSchema,
+  ): this;
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  delete<TSchema extends SchemaDefinition = {}>(
+    path: string,
     middlewaresOrHandler:
       | (MiddlewareDefinition | TSchema)[]
       | RouteHandler<TSchema, TExtensions>,
     handlerOrSchema?: RouteHandler<TSchema, TExtensions> | TSchema,
+    schema?: TSchema,
   ): this {
     this.addRoute<TSchema>(
       "DELETE",
       path,
       middlewaresOrHandler,
       handlerOrSchema,
+      schema,
     );
     return this;
   }
@@ -248,16 +299,25 @@ export class KitoRouter<TExtensions = {}>
   // biome-ignore lint/complexity/noBannedTypes: ...
   patch<TSchema extends SchemaDefinition = {}>(
     path: string,
+    middlewares: (MiddlewareDefinition | TSchema)[],
+    handler: RouteHandler<TSchema, TExtensions>,
+    schema: TSchema,
+  ): this;
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  patch<TSchema extends SchemaDefinition = {}>(
+    path: string,
     middlewaresOrHandler:
       | (MiddlewareDefinition | TSchema)[]
       | RouteHandler<TSchema, TExtensions>,
     handlerOrSchema?: RouteHandler<TSchema, TExtensions> | TSchema,
+    schema?: TSchema,
   ): this {
     this.addRoute<TSchema>(
       "PATCH",
       path,
       middlewaresOrHandler,
       handlerOrSchema,
+      schema,
     );
     return this;
   }
@@ -285,12 +345,26 @@ export class KitoRouter<TExtensions = {}>
   // biome-ignore lint/complexity/noBannedTypes: ...
   head<TSchema extends SchemaDefinition = {}>(
     path: string,
+    middlewares: (MiddlewareDefinition | TSchema)[],
+    handler: RouteHandler<TSchema, TExtensions>,
+    schema: TSchema,
+  ): this;
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  head<TSchema extends SchemaDefinition = {}>(
+    path: string,
     middlewaresOrHandler:
       | (MiddlewareDefinition | TSchema)[]
       | RouteHandler<TSchema, TExtensions>,
     handlerOrSchema?: RouteHandler<TSchema, TExtensions> | TSchema,
+    schema?: TSchema,
   ): this {
-    this.addRoute<TSchema>("HEAD", path, middlewaresOrHandler, handlerOrSchema);
+    this.addRoute<TSchema>(
+      "HEAD",
+      path,
+      middlewaresOrHandler,
+      handlerOrSchema,
+      schema,
+    );
     return this;
   }
 
@@ -317,16 +391,25 @@ export class KitoRouter<TExtensions = {}>
   // biome-ignore lint/complexity/noBannedTypes: ...
   options<TSchema extends SchemaDefinition = {}>(
     path: string,
+    middlewares: (MiddlewareDefinition | TSchema)[],
+    handler: RouteHandler<TSchema, TExtensions>,
+    schema: TSchema,
+  ): this;
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  options<TSchema extends SchemaDefinition = {}>(
+    path: string,
     middlewaresOrHandler:
       | (MiddlewareDefinition | TSchema)[]
       | RouteHandler<TSchema, TExtensions>,
     handlerOrSchema?: RouteHandler<TSchema, TExtensions> | TSchema,
+    schema?: TSchema,
   ): this {
     this.addRoute<TSchema>(
       "OPTIONS",
       path,
       middlewaresOrHandler,
       handlerOrSchema,
+      schema,
     );
     return this;
   }
@@ -384,6 +467,7 @@ export class KitoRouter<TExtensions = {}>
           | (MiddlewareDefinition | TSchema)[]
           | RouteHandler<TSchema, TExtensions>,
         handler?: RouteHandler<TSchema, TExtensions>,
+        schema?: TSchema,
       ): RouteChain<TExtensions> {
         if (typeof middlewaresOrHandler === "function") {
           self.addRoute(
@@ -391,6 +475,7 @@ export class KitoRouter<TExtensions = {}>
             path,
             mergeMiddlewares<TSchema>(),
             middlewaresOrHandler,
+            schema,
           );
         } else {
           self.addRoute(
@@ -398,6 +483,7 @@ export class KitoRouter<TExtensions = {}>
             path,
             mergeMiddlewares<TSchema>(middlewaresOrHandler),
             handler,
+            schema,
           );
         }
         return chain;
@@ -409,6 +495,7 @@ export class KitoRouter<TExtensions = {}>
           | (MiddlewareDefinition | TSchema)[]
           | RouteHandler<TSchema, TExtensions>,
         handler?: RouteHandler<TSchema, TExtensions>,
+        schema?: TSchema,
       ): RouteChain<TExtensions> {
         if (typeof middlewaresOrHandler === "function") {
           self.addRoute(
@@ -416,6 +503,7 @@ export class KitoRouter<TExtensions = {}>
             path,
             mergeMiddlewares<TSchema>(),
             middlewaresOrHandler,
+            schema,
           );
         } else {
           self.addRoute(
@@ -423,6 +511,7 @@ export class KitoRouter<TExtensions = {}>
             path,
             mergeMiddlewares<TSchema>(middlewaresOrHandler),
             handler,
+            schema,
           );
         }
         return chain;
@@ -434,6 +523,7 @@ export class KitoRouter<TExtensions = {}>
           | (MiddlewareDefinition | TSchema)[]
           | RouteHandler<TSchema, TExtensions>,
         handler?: RouteHandler<TSchema, TExtensions>,
+        schema?: TSchema,
       ): RouteChain<TExtensions> {
         if (typeof middlewaresOrHandler === "function") {
           self.addRoute(
@@ -441,6 +531,7 @@ export class KitoRouter<TExtensions = {}>
             path,
             mergeMiddlewares<TSchema>(),
             middlewaresOrHandler,
+            schema,
           );
         } else {
           self.addRoute(
@@ -448,6 +539,7 @@ export class KitoRouter<TExtensions = {}>
             path,
             mergeMiddlewares<TSchema>(middlewaresOrHandler),
             handler,
+            schema,
           );
         }
         return chain;
@@ -459,6 +551,7 @@ export class KitoRouter<TExtensions = {}>
           | (MiddlewareDefinition | TSchema)[]
           | RouteHandler<TSchema, TExtensions>,
         handler?: RouteHandler<TSchema, TExtensions>,
+        schema?: TSchema,
       ): RouteChain<TExtensions> {
         if (typeof middlewaresOrHandler === "function") {
           self.addRoute(
@@ -466,6 +559,7 @@ export class KitoRouter<TExtensions = {}>
             path,
             mergeMiddlewares<TSchema>(),
             middlewaresOrHandler,
+            schema,
           );
         } else {
           self.addRoute(
@@ -473,6 +567,7 @@ export class KitoRouter<TExtensions = {}>
             path,
             mergeMiddlewares<TSchema>(middlewaresOrHandler),
             handler,
+            schema,
           );
         }
         return chain;
@@ -484,6 +579,7 @@ export class KitoRouter<TExtensions = {}>
           | (MiddlewareDefinition | TSchema)[]
           | RouteHandler<TSchema, TExtensions>,
         handler?: RouteHandler<TSchema, TExtensions>,
+        schema?: TSchema,
       ): RouteChain<TExtensions> {
         if (typeof middlewaresOrHandler === "function") {
           self.addRoute(
@@ -491,6 +587,7 @@ export class KitoRouter<TExtensions = {}>
             path,
             mergeMiddlewares<TSchema>(),
             middlewaresOrHandler,
+            schema,
           );
         } else {
           self.addRoute(
@@ -498,6 +595,7 @@ export class KitoRouter<TExtensions = {}>
             path,
             mergeMiddlewares<TSchema>(middlewaresOrHandler),
             handler,
+            schema,
           );
         }
         return chain;
@@ -509,6 +607,7 @@ export class KitoRouter<TExtensions = {}>
           | (MiddlewareDefinition | TSchema)[]
           | RouteHandler<TSchema, TExtensions>,
         handler?: RouteHandler<TSchema, TExtensions>,
+        schema?: TSchema,
       ): RouteChain<TExtensions> {
         if (typeof middlewaresOrHandler === "function") {
           self.addRoute(
@@ -516,6 +615,7 @@ export class KitoRouter<TExtensions = {}>
             path,
             mergeMiddlewares<TSchema>(),
             middlewaresOrHandler,
+            schema,
           );
         } else {
           self.addRoute(
@@ -523,6 +623,7 @@ export class KitoRouter<TExtensions = {}>
             path,
             mergeMiddlewares<TSchema>(middlewaresOrHandler),
             handler,
+            schema,
           );
         }
         return chain;
@@ -534,6 +635,7 @@ export class KitoRouter<TExtensions = {}>
           | (MiddlewareDefinition | TSchema)[]
           | RouteHandler<TSchema, TExtensions>,
         handler?: RouteHandler<TSchema, TExtensions>,
+        schema?: TSchema,
       ): RouteChain<TExtensions> {
         if (typeof middlewaresOrHandler === "function") {
           self.addRoute(
@@ -541,6 +643,7 @@ export class KitoRouter<TExtensions = {}>
             path,
             mergeMiddlewares<TSchema>(),
             middlewaresOrHandler,
+            schema,
           );
         } else {
           self.addRoute(
@@ -548,6 +651,7 @@ export class KitoRouter<TExtensions = {}>
             path,
             mergeMiddlewares<TSchema>(middlewaresOrHandler),
             handler,
+            schema,
           );
         }
         return chain;
@@ -569,6 +673,7 @@ export class KitoRouter<TExtensions = {}>
       | (MiddlewareDefinition | TSchema)[]
       | RouteHandler<TSchema, TExtensions>,
     handlerOrSchema?: RouteHandler<TSchema, TExtensions> | TSchema,
+    schema?: TSchema,
   ): void {
     let finalHandler: RouteHandler<TSchema, TExtensions>;
     let middlewares: (MiddlewareDefinition | TSchema)[] = [];
@@ -582,6 +687,10 @@ export class KitoRouter<TExtensions = {}>
     } else {
       middlewares = middlewaresOrHandler as (MiddlewareDefinition | TSchema)[];
       finalHandler = handlerOrSchema as RouteHandler<TSchema, TExtensions>;
+    }
+
+    if (schema) {
+      middlewares.push(schema);
     }
 
     const normalizedPath = this.normalizePath(path);

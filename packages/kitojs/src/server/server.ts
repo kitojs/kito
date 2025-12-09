@@ -130,8 +130,9 @@ export class KitoServer<TExtensions = {}>
       | (MiddlewareDefinition | TSchema)[]
       | RouteHandler<TSchema, TExtensions>,
     handler?: RouteHandler<TSchema, TExtensions>,
+    schema?: TSchema,
   ): void {
-    super.addRoute(method, path, middlewaresOrHandler, handler);
+    super.addRoute(method, path, middlewaresOrHandler, handler, schema);
 
     const route = this.routes[this.routes.length - 1];
 
