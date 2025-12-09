@@ -53,6 +53,20 @@ app.get("/", ({ res }) => {
 app.listen(3000);
 ```
 
+<details>
+  <summary><strong>Fluent style</strong></summary>
+
+  Kito also supports fluent style. You can chain all methods. **See the examples [here](https://github.com/kitojs/kito/tree/main/examples/fluent).**
+
+  ```ts
+  import { server } from "kitojs";
+
+  server()
+    .get("/", ({ res }) => res.send("hello world!"))
+    .listen(3000);
+  ```
+</details>
+
 ---
 
 ## 📚 Documentation
