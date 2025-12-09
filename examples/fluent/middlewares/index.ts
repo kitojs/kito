@@ -5,5 +5,5 @@ import { logger } from "./samples/logger";
 
 server()
   .use(logger)
-  .get("/", [auth], ({ res }) => res.send("hello world!"))
+  .get("/", auth, ({ res }) => res.send("hello world!"))
   .listen(3000);

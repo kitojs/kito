@@ -6,7 +6,7 @@ import { logger } from "./samples/logger";
 const app = server();
 app.use(logger);
 
-app.get("/", [auth], ({ res }) => {
+app.get("/", auth, ({ res }) => {
   res.send("hello world!");
 });
 
