@@ -336,6 +336,11 @@ export class ResponseBuilder implements KitoResponse {
 
   // end methods
 
+  end(): void {
+    this.checkFinished();
+    this.serializeAndSend();
+  }
+
   send(data: unknown): void {
     this.checkFinished();
     if (Buffer.isBuffer(data)) {

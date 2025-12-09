@@ -75,6 +75,7 @@ export interface KitoResponse<TResponseSchema = unknown> {
     options?: CookieOptions,
   ): KitoResponse<TResponseSchema>;
 
+  end(): void;
   send(
     data: TResponseSchema extends SchemaType
       ? InferType<TResponseSchema>
