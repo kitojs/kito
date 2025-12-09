@@ -7,9 +7,12 @@ app.get("/", ({ res }) => {
 
   sse.send("hello world!");
 
-  sse.send({
-    msg: "this is a message",
-  }, "message");
+  sse.send(
+    {
+      msg: "this is a message",
+    },
+    "message",
+  );
 
   sse.close();
 });
