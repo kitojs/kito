@@ -32,6 +32,15 @@ export interface KitoRouterInstance<TExtensions = {}> {
     handler: RouteHandler<TSchema, TExtensions>,
     schema: TSchema,
   ): KitoRouterInstance<TExtensions>;
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  get<TSchema extends SchemaDefinition = {}>(
+    path: string,
+    middlewares:
+      | (MiddlewareDefinition | TSchema)[]
+      | (MiddlewareDefinition | TSchema),
+    handler: RouteHandler<TSchema, TExtensions>,
+    schema: TSchema,
+  ): KitoRouterInstance<TExtensions>;
 
   // biome-ignore lint/complexity/noBannedTypes: ...
   post<TSchema extends SchemaDefinition = {}>(
@@ -49,6 +58,15 @@ export interface KitoRouterInstance<TExtensions = {}> {
   // biome-ignore lint/complexity/noBannedTypes: ...
   post<TSchema extends SchemaDefinition = {}>(
     path: string,
+    handler: RouteHandler<TSchema, TExtensions>,
+    schema: TSchema,
+  ): KitoRouterInstance<TExtensions>;
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  post<TSchema extends SchemaDefinition = {}>(
+    path: string,
+    middlewares:
+      | (MiddlewareDefinition | TSchema)[]
+      | (MiddlewareDefinition | TSchema),
     handler: RouteHandler<TSchema, TExtensions>,
     schema: TSchema,
   ): KitoRouterInstance<TExtensions>;
@@ -72,6 +90,15 @@ export interface KitoRouterInstance<TExtensions = {}> {
     handler: RouteHandler<TSchema, TExtensions>,
     schema: TSchema,
   ): KitoRouterInstance<TExtensions>;
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  put<TSchema extends SchemaDefinition = {}>(
+    path: string,
+    middlewares:
+      | (MiddlewareDefinition | TSchema)[]
+      | (MiddlewareDefinition | TSchema),
+    handler: RouteHandler<TSchema, TExtensions>,
+    schema: TSchema,
+  ): KitoRouterInstance<TExtensions>;
 
   // biome-ignore lint/complexity/noBannedTypes: ...
   delete<TSchema extends SchemaDefinition = {}>(
@@ -89,6 +116,15 @@ export interface KitoRouterInstance<TExtensions = {}> {
   // biome-ignore lint/complexity/noBannedTypes: ...
   delete<TSchema extends SchemaDefinition = {}>(
     path: string,
+    handler: RouteHandler<TSchema, TExtensions>,
+    schema: TSchema,
+  ): KitoRouterInstance<TExtensions>;
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  delete<TSchema extends SchemaDefinition = {}>(
+    path: string,
+    middlewares:
+      | (MiddlewareDefinition | TSchema)[]
+      | (MiddlewareDefinition | TSchema),
     handler: RouteHandler<TSchema, TExtensions>,
     schema: TSchema,
   ): KitoRouterInstance<TExtensions>;
@@ -112,6 +148,15 @@ export interface KitoRouterInstance<TExtensions = {}> {
     handler: RouteHandler<TSchema, TExtensions>,
     schema: TSchema,
   ): KitoRouterInstance<TExtensions>;
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  patch<TSchema extends SchemaDefinition = {}>(
+    path: string,
+    middlewares:
+      | (MiddlewareDefinition | TSchema)[]
+      | (MiddlewareDefinition | TSchema),
+    handler: RouteHandler<TSchema, TExtensions>,
+    schema: TSchema,
+  ): KitoRouterInstance<TExtensions>;
 
   // biome-ignore lint/complexity/noBannedTypes: ...
   head<TSchema extends SchemaDefinition = {}>(
@@ -132,6 +177,15 @@ export interface KitoRouterInstance<TExtensions = {}> {
     handler: RouteHandler<TSchema, TExtensions>,
     schema: TSchema,
   ): KitoRouterInstance<TExtensions>;
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  head<TSchema extends SchemaDefinition = {}>(
+    path: string,
+    middlewares:
+      | (MiddlewareDefinition | TSchema)[]
+      | (MiddlewareDefinition | TSchema),
+    handler: RouteHandler<TSchema, TExtensions>,
+    schema: TSchema,
+  ): KitoRouterInstance<TExtensions>;
 
   // biome-ignore lint/complexity/noBannedTypes: ...
   options<TSchema extends SchemaDefinition = {}>(
@@ -149,6 +203,15 @@ export interface KitoRouterInstance<TExtensions = {}> {
   // biome-ignore lint/complexity/noBannedTypes: ...
   options<TSchema extends SchemaDefinition = {}>(
     path: string,
+    handler: RouteHandler<TSchema, TExtensions>,
+    schema: TSchema,
+  ): KitoRouterInstance<TExtensions>;
+  // biome-ignore lint/complexity/noBannedTypes: ...
+  options<TSchema extends SchemaDefinition = {}>(
+    path: string,
+    middlewares:
+      | (MiddlewareDefinition | TSchema)[]
+      | (MiddlewareDefinition | TSchema),
     handler: RouteHandler<TSchema, TExtensions>,
     schema: TSchema,
   ): KitoRouterInstance<TExtensions>;
