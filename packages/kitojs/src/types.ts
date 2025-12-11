@@ -28,4 +28,6 @@ export type {
   MiddlewareDefinition,
   RouteChain,
   KitoRouterInstance,
+  ServerOptions,
+  KitoServerInstance,
 } from "@kitojs/types";
