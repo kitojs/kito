@@ -1,6 +1,6 @@
 {
   "name": "kitojs",
-  "version": "1.0.0-alpha.7",
+  "version": "1.0.0-alpha.8",
   "description": "🐺 The high-performance, type-safe and modern TypeScript web framework written in Rust.",
   "scripts": {
     "build": "tsdown",
