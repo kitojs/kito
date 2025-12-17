@@ -301,13 +301,17 @@ export class KitoServer<TExtensions = {}>
     ];
 
     for (const method of methods) {
-      this.coreServer.addRoute({
-        method,
-        path: "{*path}",
-        handler: routeHandler,
-        schema: undefined,
-        staticResponse: undefined,
-      });
+      try {
+        this.coreServer.addRoute({
+          method,
+          path: "/{*path}",
+          handler: routeHandler,
+          schema: undefined,
+          staticResponse: undefined,
+        });
+      } catch (e) {
+        // Suppress conflict error
+      }
     }
   }
 
