@@ -9,6 +9,7 @@ app.get("/download", ({ res }) => {
     lastModified: true,
     cacheControl: true,
     immutable: false,
+    etag: true,
   });
 });
 

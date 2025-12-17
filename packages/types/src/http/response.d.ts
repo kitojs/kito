@@ -94,7 +94,7 @@ export interface KitoResponse<TResponseSchema = unknown> {
   location(url: string): KitoResponse<TResponseSchema>;
 
   attachment(filename?: string): KitoResponse<TResponseSchema>;
-  download(path: string, filename?: string): void;
+  download(path: string, filename?: string, options?: SendFileOptions): void;
   sendFile(path: string, options?: SendFileOptions): void;
 
   vary(field: string): KitoResponse<TResponseSchema>;
@@ -125,4 +125,5 @@ export interface SendFileOptions {
   acceptRanges?: boolean;
   cacheControl?: boolean;
   immutable?: boolean;
+  etag?: boolean;
 }

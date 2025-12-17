@@ -14,7 +14,7 @@ import {
   sendChunk,
   endStream,
 } from "@kitojs/kito-core";
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 
 const HTTP_STATUS_MESSAGES: Record<number, string> = {
   100: "Continue",
@@ -407,34 +407,51 @@ export class ResponseBuilder implements KitoResponse {
     return this.header("content-disposition", "attachment");
   }
 
-  download(path: string, filename?: string): void {
-    this.checkFinished();
-
+  download(path: string, filename?: string, options?: SendFileOptions): void {
     const name = filename || path.split("/").pop() || "download";
-    this.attachment(name);
 
-    try {
-      this.state.body = readFileSync(path);
-      this.serializeAndSend();
-    } catch (_) {
-      this.state.status = 404;
-      this.state.body = Buffer.from("File Not Found", "utf-8");
-      this.serializeAndSend();
-    }
+    this.attachment(name);
+    this.sendFile(path, options);
   }
 
-  sendFile(path: string, options?: SendFileOptions): void {
+  sendFile(path: string, options: SendFileOptions = {}): void {
     this.checkFinished();
 
     try {
-      const fullPath = options?.root ? `${options.root}/${path}` : path;
+      const fullPath = options.root ? `${options.root}/${path}` : path;
+      const stats = statSync(fullPath);
+
       this.state.body = readFileSync(fullPath);
 
       const mimeType = this.getMimeType(path);
       this.type(mimeType);
 
-      if (options?.headers) {
+      if (options.headers) {
         this.headers(options.headers);
+      }
+
+      if (options.acceptRanges) {
+        this.header("accept-ranges", "bytes");
+      }
+
+      if (options.cacheControl !== false) {
+        const maxAge = options.maxAge || 0;
+        let cacheControl = `public, max-age=${Math.floor(maxAge / 1000)}`;
+
+        if (options.immutable) {
+          cacheControl += ", immutable";
+        }
+
+        this.header("cache-control", cacheControl);
+      }
+
+      if (options.lastModified !== false) {
+        this.header("last-modified", stats.mtime.toUTCString());
+      }
+
+      if (options.etag !== false) {
+        const etag = `W/"${stats.size.toString(16)}-${stats.mtime.getTime().toString(16)}"`;
+        this.header("etag", etag);
       }
 
       this.serializeAndSend();
