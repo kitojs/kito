@@ -81,10 +81,13 @@ export class KitoRouter<TExtensions = {}>
    */
   mount(path: string, router: KitoRouter<TExtensions>): this {
     const normalizedPath = this.normalizePath(path);
+    const prefix = normalizedPath === "/" ? "" : normalizedPath;
+    const subRouterMiddlewares = router.getMiddlewares();
 
     const mountedRoutes = router.getRoutes().map((route) => ({
       ...route,
-      path: normalizedPath + route.path,
+      path: prefix + route.path,
+      middlewares: [...subRouterMiddlewares, ...route.middlewares],
     }));
 
     this.routes.push(...mountedRoutes);
