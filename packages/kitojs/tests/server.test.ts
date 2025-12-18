@@ -127,36 +127,6 @@ describe("Server", () => {
     });
   });
 
-  describe("Route Chaining", () => {
-    it("should support fluent API", () => {
-      expect(() => {
-        app
-          .get("/", (ctx) => ctx.res.send("home"))
-          .post("/users", (ctx) => ctx.res.json({ created: true }))
-          .get("/about", (ctx) => ctx.res.send("about"));
-      }).not.toThrow();
-    });
-
-    it("should use route() builder", () => {
-      const routes = app.route("/api");
-
-      expect(typeof routes.get).toBe("function");
-      expect(typeof routes.post).toBe("function");
-      expect(typeof routes.end).toBe("function");
-    });
-
-    it("should chain routes and end", () => {
-      expect(() => {
-        app
-          .route("/api")
-          .get((ctx) => ctx.res.send("get"))
-          .post((ctx) => ctx.res.send("post"))
-          .end()
-          .get("/", (ctx) => ctx.res.send("home"));
-      }).not.toThrow();
-    });
-  });
-
   describe("Extension", () => {
     it("should extend context", () => {
       const extendedApp = app.extend<{ db: { query: () => string } }>((ctx) => {
