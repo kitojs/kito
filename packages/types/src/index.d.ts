@@ -16,3 +16,4 @@ export * from "./schema/object";
 export * from "./schema/literal";
 export * from "./schema/union";
 export * from "./schema/jsonSchema";
+export * from "./errors";

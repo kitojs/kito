@@ -203,7 +203,12 @@ export class KitoServer<TExtensions = {}>
         this.extensionFn(context);
       }
 
-      await fusedHandler(context);
+      try {
+        await fusedHandler(context);
+        // biome-ignore lint/suspicious/noExplicitAny: ...
+      } catch (error: any) {
+        await this.handleError(error, context);
+      }
     };
 
     const schemaJson = routeSchema
@@ -281,7 +286,12 @@ export class KitoServer<TExtensions = {}>
         this.extensionFn(context);
       }
 
-      await fusedHandler(context);
+      try {
+        await fusedHandler(context);
+        // biome-ignore lint/suspicious/noExplicitAny: ...
+      } catch (error: any) {
+        await this.handleError(error, context);
+      }
     };
 
     const methods: HttpMethod[] = [
@@ -447,6 +457,64 @@ export class KitoServer<TExtensions = {}>
    */
   close(): void {
     this.coreServer.close();
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: ...
+  private async handleError(error: any, ctx: KitoContext<SchemaDefinition>) {
+    const errorContext = { ...ctx, error };
+
+    for (const observer of this.observeHandlers) {
+      try {
+        await observer(errorContext);
+      } catch (_) {}
+    }
+
+    let handled = false;
+
+    for (const handlerDef of this.errorHandlers) {
+      if (handlerDef.type === "global") {
+        await handlerDef.handler(errorContext);
+        handled = true;
+        break;
+      }
+
+      if (handlerDef.type === "code") {
+        if (error.code === handlerDef.target) {
+          await handlerDef.handler(errorContext);
+          handled = true;
+          break;
+        }
+      }
+
+      if (handlerDef.type === "specific") {
+        const targets = Array.isArray(handlerDef.target)
+          ? handlerDef.target
+          : [handlerDef.target];
+
+        // biome-ignore lint/suspicious/noExplicitAny: ...
+        const isMatch = targets.some((t: any) => {
+          if (t.code && error.code === t.code) return true;
+          if (typeof t === "function" && error instanceof t) return true;
+          return false;
+        });
+
+        if (isMatch) {
+          await handlerDef.handler(errorContext);
+          handled = true;
+          break;
+        }
+      }
+    }
+
+    if (!handled) {
+      if (this.unhandledErrorHandler) {
+        await this.unhandledErrorHandler(errorContext);
+      } else {
+        if (!ctx.res.headersSent) {
+          ctx.res.status(500).json({ error: "Internal Server Error" });
+        }
+      }
+    }
   }
 }
 

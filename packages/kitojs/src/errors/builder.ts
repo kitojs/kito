@@ -49,7 +49,7 @@ export class ErrorBuilder<T = void> {
     const status = this._status;
     const messageOrFn = this._message;
 
-    return ((data: T) => {
+    const factory = ((data: T) => {
       const message =
         typeof messageOrFn === "function"
           ? (messageOrFn as (data: T) => string)(data)
@@ -57,6 +57,11 @@ export class ErrorBuilder<T = void> {
 
       return new KitoError(code, status, message, data);
     }) as ErrorFactory<T>;
+
+    // biome-ignore lint/suspicious/noExplicitAny: ...
+    (factory as any).code = code;
+
+    return factory;
   }
 }
 

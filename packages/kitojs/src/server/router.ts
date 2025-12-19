@@ -8,6 +8,9 @@ import type {
   RouteChain,
   KitoRouterInstance,
   RouteDefinition,
+  ErrorHandlerDefinition,
+  ErrorHandler,
+  ObserveErrorHandler,
 } from "@kitojs/types";
 
 /**
@@ -34,6 +37,12 @@ export class KitoRouter<TExtensions = {}>
   protected routes: RouteDefinition<TExtensions>[] = [];
   protected middlewares: MiddlewareDefinition[] = [];
   protected prefix = "";
+
+  protected errorHandlers: ErrorHandlerDefinition<TExtensions>[] = [];
+  // biome-ignore lint/suspicious/noExplicitAny: ...
+  protected observeHandlers: ObserveErrorHandler<any, TExtensions>[] = [];
+  // biome-ignore lint/suspicious/noExplicitAny: ...
+  protected unhandledErrorHandler?: ErrorHandler<any, TExtensions>;
 
   /**
    * Registers a global middleware that runs for all routes in this router.
@@ -92,6 +101,63 @@ export class KitoRouter<TExtensions = {}>
 
     this.routes.push(...mountedRoutes);
 
+    this.errorHandlers.push(...router.errorHandlers);
+    this.observeHandlers.push(...router.observeHandlers);
+
+    return this;
+  }
+
+  /**
+   * Registers an error handler.
+   *
+   * @param target - Error class, error code, array of errors, or handler function (catch-all)
+   * @param handler - The error handler function
+   */
+  // biome-ignore lint/suspicious/noExplicitAny: ...
+  onError<TError = any>(
+    // biome-ignore lint/suspicious/noExplicitAny: ...
+    target: any | string | any[],
+    handler?: ErrorHandler<TError, TExtensions>,
+  ): this {
+    if (typeof target === "function" && !handler) {
+      this.errorHandlers.push({
+        type: "global",
+        // biome-ignore lint/suspicious/noExplicitAny: ...
+        handler: target as ErrorHandler<any, TExtensions>,
+      });
+    } else {
+      this.errorHandlers.push({
+        type: typeof target === "string" ? "code" : "specific",
+        target,
+        handler: handler as ErrorHandler<TError, TExtensions>,
+      });
+    }
+    return this;
+  }
+
+  /**
+   * Registers an observer for all errors.
+   *
+   * @param handler - The observer handler function
+   */
+  // biome-ignore lint/suspicious/noExplicitAny: ...
+  observeError<TError = any>(
+    handler: ObserveErrorHandler<TError, TExtensions>,
+  ): this {
+    this.observeHandlers.push(handler);
+    return this;
+  }
+
+  /**
+   * Registers a handler for unhandled errors.
+   *
+   * @param handler - The unhandled error handler function
+   */
+  // biome-ignore lint/suspicious/noExplicitAny: ...
+  onUnhandledError<TError = any>(
+    handler: ErrorHandler<TError, TExtensions>,
+  ): this {
+    this.unhandledErrorHandler = handler;
     return this;
   }
 

@@ -35,6 +35,7 @@ export interface SSEWriter {
 export interface KitoResponse<TResponseSchema = unknown> {
   status(code: number): KitoResponse<TResponseSchema>;
   sendStatus(code: number): void;
+  readonly headersSent: boolean;
 
   header(
     name: CommonResponseHeaderNames,

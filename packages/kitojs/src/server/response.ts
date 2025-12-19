@@ -124,6 +124,10 @@ export class ResponseBuilder implements KitoResponse {
     }
   }
 
+  get headersSent(): boolean {
+    return this.finished;
+  }
+
   private serializeAndSend(): void {
     const headersArray = Array.from(this.state.headers.entries());
     const headersJson = JSON.stringify(headersArray);
