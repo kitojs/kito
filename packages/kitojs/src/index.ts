@@ -81,4 +81,6 @@ export * from "./helpers/middleware";
 
 export * from "./server/server";
 export * from "./server/router";
+export * from "./errors";
+export * from "./builtin";
 export * from "./types";
