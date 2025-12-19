@@ -140,17 +140,11 @@ export class KitoServer<TExtensions = {}>
   }
 
   override mount(path: string, router: KitoRouter<TExtensions>): this {
-    const routesToMount = (router as KitoRouter<TExtensions>)["routes"];
-
+    const routeIndex = this.routes.length;
     super.mount(path, router);
-    const normalizedPath = this["normalizePath"](path);
 
-    for (const route of routesToMount) {
-      const prefixedRoute = {
-        ...route,
-        path: normalizedPath + route.path,
-      };
-      this.registerRouteWithCore(prefixedRoute);
+    for (let i = routeIndex; i < this.routes.length; i++) {
+      this.registerRouteWithCore(this.routes[i]);
     }
 
     return this;
