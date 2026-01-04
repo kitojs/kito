@@ -91,21 +91,7 @@ impl ServerCore {
         let host = self.config.host.as_deref().unwrap_or("0.0.0.0");
         let addr: SocketAddr = format!("{host}:{port}").parse().expect("Invalid address");
 
-        let listener = if self.config.reuse_port.unwrap_or(false) {
-            #[cfg(unix)]
-            {
-                create_reusable_listener(addr).await.expect("Failed to create listener")
-            }
-            #[cfg(not(unix))]
-            {
-                eprintln!(
-                    "Warning: reuse_port is not supported on this platform, using standard listener"
-                );
-                TcpListener::bind(addr).await.expect("Failed to bind")
-            }
-        } else {
-            TcpListener::bind(addr).await.expect("Failed to bind")
-        };
+        let listener = create_reusable_listener(addr).await.expect("Failed to create listener");
 
         if let Some(ready_cb) = ready {
             ready_cb.call(Ok(()), ThreadsafeFunctionCallMode::NonBlocking);
@@ -186,7 +172,6 @@ impl ServerCore {
     }
 }
 
-#[cfg(unix)]
 async fn create_reusable_listener(addr: SocketAddr) -> std::io::Result<TcpListener> {
     use socket2::{Domain, Protocol, Socket, Type};
     use std::net::TcpListener as StdListener;
