@@ -47,6 +47,9 @@ importers:
       fastify:
         specifier: ^5.6.1
         version: 5.6.1
+      h3:
+        specifier: ^2.0.1-rc.14
+        version: 2.0.1-rc.14(crossws@0.4.4(srvx@0.11.3))
       hono:
         specifier: ^4.10.4
         version: 4.10.4
@@ -2019,6 +2022,16 @@ packages:
   gopd@1.2.0:
     resolution: {integrity: sha512-ZUKRh6/kUFoAiTAtTYPZJ3hw9wNxx+BIBOijnlG9PnrJsCcSjs1wyyD6vJpaYtgnzDrKYRSqf3OO6Rfa93xsRg==}
     engines: {node: '>= 0.4'}
+
+  h3@2.0.1-rc.14:
+    resolution: {integrity: sha512-163qbGmTr/9rqQRNuqMqtgXnOUAkE4KTdauiC9y0E5iG1I65kte9NyfWvZw5RTDMt6eY+DtyoNzrQ9wA2BfvGQ==}
+    engines: {node: '>=20.11.1'}
+    hasBin: true
+    peerDependencies:
+      crossws: ^0.4.1
+    peerDependenciesMeta:
+      crossws:
+        optional: true
 
   handle-thing@2.0.1:
     resolution: {integrity: sha512-9Qn4yBxelxoh2Ow62nP+Ka/kMnOXRi8BXnRaUwezLNhqelnN49xKz4F/dPP8OYLxLxq6JDtZb2i9XznUQbNPTg==}
@@ -4642,6 +4655,13 @@ snapshots:
       assert-plus: 1.0.0
 
   gopd@1.2.0: {}
+
+  h3@2.0.1-rc.14(crossws@0.4.4(srvx@0.11.3)):
+    dependencies:
+      rou3: 0.7.12
+      srvx: 0.11.3
+    optionalDependencies:
+      crossws: 0.4.4(srvx@0.11.3)
 
   handle-thing@2.0.1: {}
 

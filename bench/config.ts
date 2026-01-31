@@ -8,6 +8,7 @@ export default {
     "elysia",
     "express",
     "fastify",
+    "h3",
     "hono",
     "restify",
     "tinyhttp",
